@@ -17,21 +17,8 @@
 #include "geometry.h"
 
 
+
 namespace geom2d {
-
-
-	//////////////////
-	//Helper functions
-	//////////////////
-
-	inline int sign( double x ) {
-		return x == 0.0 ? 0 : (x<0 ? -1 : 1);
-	}
-
-	inline int sign( int x ) {
-		return x == 0 ? 0 : (x<0 ? -1 : 1);
-	}
-
 
 
 	//////////////////
@@ -58,16 +45,8 @@ namespace geom2d {
 	///////////////
 	//Vector struct
 	///////////////
-
 	template <typename T>
-	struct Vec2D {
-		Vec2D() : x(), y() {};
-		Vec2D( T x, T y ) : x( x ), y( y ) {};
-		Vec2D( const Vec2D<T>& vec ) : x( vec.x ), y( vec.y ) {};
-
-		T x;
-		T y;
-	};
+	using Vec2D = geom::Vec<T, 2>;
 
 
 
@@ -75,55 +54,10 @@ namespace geom2d {
 	//Vector operator
 	/////////////////
 
-	template <typename T>
-	bool operator == ( const Vec2D<T>& lhs, const Vec2D<T>& rhs ) {
-		return (lhs.x == rhs.x && lhs.y == rhs.y);
-	}
-
-	template <typename T>
-	bool operator != ( const Vec2D<T>& lhs, const Vec2D<T>& rhs ) {
-		return !(lhs == rhs);
-	}
-
-	template <typename T>
-	Vec2D<T> operator+( const Vec2D<T>& lhs, const Vec2D<T>& rhs ) {
-		return{ lhs.x + rhs.x, lhs.y + rhs.y };
-	}
-
-	template <typename T>
-	Vec2D<T> operator-( const Vec2D<T>& lhs, const Vec2D<T>& rhs ) {
-		return{ lhs.x - rhs.x, lhs.y - rhs.y };
-	}
-
-	template <typename T>
-	T operator*( const Vec2D<T>& lhs, const Vec2D<T>& rhs ) {
-		return{ lhs.x * rhs.x + lhs.y * rhs.y };
-	}
-
-	template <typename T>
-	Vec2D<T> operator*( const Vec2D<T>& vec, T factor ) {
-		return{ vec.x * factor, vec.y * factor };
-	}
-
-	template <typename T>
-	Vec2D<T> operator*( T factor, const Vec2D<T>& vec ) {
-		return vec*factor;
-	}
-
-	template <typename T>
-	Vec2D<T> operator/( const Vec2D<T>& vec, T factor ) {
-		return{ vec.x / factor, vec.y / factor }; //Vorsicht bei integralen Datentypen!
-	}
-
 	//Returns the cross product of the given vectors
 	template <typename T>
-	T cross( const Vec2D<T> vec1, const Vec2D<T> vec2 ) {
-		return vec1.x * vec2.y - vec1.y * vec2.x;
-	}
-
-	template<typename T>
-	std::string print( const Vec2D<T>& vec ) {
-		return std::string( "(" + std::to_string( vec.x ) + "," + std::to_string( vec.y ) + ")" );
+	T cross( const Vec2D<T>& vec1, const Vec2D<T>& vec2 ) {
+		return vec1[0] * vec2[1] - vec1[1] * vec2[0];
 	}
 
 
@@ -131,26 +65,10 @@ namespace geom2d {
 	//Vector Arithmetic
 	///////////////////
 
-	template<typename T>
-	double norm( const Vec2D<T>& vec ) {
-		return std::sqrt( vec * vec );
-	}
-
-	template<typename T>
-	Vec2D<T> normalize( const Vec2D<T>& vec ) {
-		double length = norm( vec );
-		return vec / length;
-	}
-
-	template<typename T>
-	double dist( const Vec2D<T>& p1, const Vec2D<T>& p2 ) {
-		return norm( p2 - p1 );
-	}
-
 	//Computes the vector rotated 90 deg counter-clockwise (preserves length)
 	template<typename T>
 	Vec2D<T> perpendicular( const Vec2D<T>& vec ) {
-		return{ -vec.y, vec.x };
+		return{ -vec[1], vec[0] };
 	}
 
 	//Computes the vector rotated 90 deg counter-clockwise and normalizes it to length 1
@@ -243,10 +161,10 @@ namespace geom2d {
 		Vec2D<T> x2y2_vec = s2.x2 - s1.x2;
 		Vec2D<T> x1x2_normal = normal( x1x2_vec );
 
-		int x1y1_sign = sign( cross( x1x2_normal, x1y1_vec ) );
-		int x1y2_sign = sign( cross( x1x2_normal, x1y2_vec ) );
-		int x2y1_sign = sign( cross( x1x2_normal, x2y1_vec ) );
-		int x2y2_sign = sign( cross( x1x2_normal, x2y2_vec ) );
+		int x1y1_sign = geom::sign( cross( x1x2_normal, x1y1_vec ) );
+		int x1y2_sign = geom::sign( cross( x1x2_normal, x1y2_vec ) );
+		int x2y1_sign = geom::sign( cross( x1x2_normal, x2y1_vec ) );
+		int x2y2_sign = geom::sign( cross( x1x2_normal, x2y2_vec ) );
 
 		if ( x1y1_sign == x1y2_sign  && x1y2_sign == x2y1_sign && x2y1_sign == x2y2_sign ) {
 			return{ -1.0, -1.0 };
@@ -299,9 +217,9 @@ namespace geom2d {
 		std::cout << "y2 auf Gerade x\n";
 		}
 		*/
-		if ( sign( cross_prod_x_y1 ) == sign( cross_prod_x_y2 ) ) {
+		if ( geom::sign( cross_prod_x_y1 ) == geom::sign( cross_prod_x_y2 ) ) {
 			//y1 and y2 on same side of x1x2 (possibly on same line)
-			if ( sign( cross_prod_x_y1 ) == 0 ) {
+			if ( geom::sign( cross_prod_x_y1 ) == 0 ) {
 				//On same line
 				return segments_on_line_intersection( s1, s2 );
 			}
