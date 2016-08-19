@@ -57,9 +57,9 @@ struct Vec {
 	Vec( const std::initializer_list<T>& coord_list ) : coordinates( coord_list ) {
 		assert( coordinates.size() == N );
 	}
-	template<typename = std::enable_if<N==2>::value>
+	template<typename = std::enable_if<N==2>::type>
 	Vec( T x, T y ) : coordinates( { x, y } ) {}
-	template<typename = std::enable_if<N == 3>::value>
+	template<typename = std::enable_if<N==3>::type>
 	Vec( T x, T y, T z ) : coordinates( { x, y, z } ) {}
 	
 
