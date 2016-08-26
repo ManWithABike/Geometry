@@ -7,13 +7,13 @@
 
 #pragma once
 
-
+#include <fplus/fplus.h>
 
 #include <vector>
 #include <string>
 #include <cassert>
+#include <type_traits>
 
-#include <fplus/fplus.h>
 
 
 namespace geom {
@@ -57,10 +57,11 @@ struct Vec {
 	Vec( const std::initializer_list<T>& coord_list ) : coordinates( coord_list ) {
 		assert( coordinates.size() == N );
 	}
-	template<typename = std::enable_if<N==2>::type>
+	template<typename = typename std::enable_if<N==2>::type>
 	Vec( T x, T y ) : coordinates( { x, y } ) {}
-	template<typename = std::enable_if<N==3>::type>
-	Vec( T x, T y, T z ) : coordinates( { x, y, z } ) {}
+	
+	//template<typename = typename std::enable_if<N==3>::type>
+	//Vec( T x, T y, T z ) : coordinates( { x, y, z } ) {}
 	
 
 	std::size_t dimension() {
@@ -80,7 +81,7 @@ private:
 template <std::size_t N, typename T, typename... Args>
 geom::Vec<T,N> make_vec( T x, Args&&... xs )
 {
-	std::size_t size = 1 + sizeof( xs );
+	std::size_t size = 1 + sizeof...( xs );
 	assert( N == size );
 	return{ x, xs... };
 }
