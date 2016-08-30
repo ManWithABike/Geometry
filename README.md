@@ -3,23 +3,10 @@
 A small convenience header-only library for linear algebra.
 
 ##Dependencies, Installation, Usage
-Dependencies: None  
-Installation: Download the Header, include it, and you're ready to go.  
-Usage: In namspace *geom::*, the library offers a struct for storing n-dimensional vertices in *R^n* or *Z^n* (i.e. as doubles or integers) with several constructors and overloads their operators. Furthermore, it offers some convenience functions for 2 dimensional vertices like *segment intersection*, *angle calculation*, *cross product*, *perpendicular* and *normal*,  *normaliziation*   
-
-##Restrictions
-1. Both polygons **P**, **Q** must be non self-intersecting and
-2. have to share the same start and end point.
-3. All intersections between **P** and **Q** must me trensversal
-
-
-##Dependencies
-Two lightweight header-only libraries:  
-1. [Geometry](https://github.com/CrikeeIP/Geometry)  
-2. [FunctionalPlus](https://github.com/Dobiasd/FunctionalPlus)  
-
-And boost (::geometry and ::index, to be exact)  
-4. [Boost](http://www.boost.org/)
+**Dependencies:** None  
+**Installation:** Download the Header, include it, and you're ready to go.
+**Usage:** In namspace *geom::*, the library offers a struct for storing n-dimensional vertices in *R^n* or *Z^n* (i.e. as doubles or integers) with several constructors and overloads their operators.  
+Furthermore, it offers a namespace *geom2d::* with some convenience functions for two-dimensional algebra like *cross product*, *perpendicular* and *normal*, *angle calculation*, *segment intersection* and higher level stuff like *polytop area* calcuation.
 
 
 ##Disclaimer
