@@ -152,101 +152,84 @@ namespace geom2d {
 	//Segment arithmetics
 	/////////////////////
 
+#define ALLOW_NO_OVERLAP 0	
+#define ALLOW_TOUCHING 1
+#define ALLOW_OVERLAP 2
+
+namespace internal{
 	template<typename T>
-	std::pair<double, double> segments_on_line_intersection( const LineSegment<T>& s1, const LineSegment<T>& s2 ) {
-		Vec2D<T> x1x2_vec = s1.x2 - s1.x1;
+	fplus::maybe<std::pair<double, double>> segments_on_line_intersection( const LineSegment<T>& s1, const LineSegment<T>& s2, int allow_overlap ) {
+		Vec2D<T> x_vec = s1.x2 - s1.x1;
 		Vec2D<T> x1y1_vec = s2.x1 - s1.x1;
 		Vec2D<T> x1y2_vec = s2.x2 - s1.x1;
 		Vec2D<T> x2y1_vec = s2.x1 - s1.x2;
 		Vec2D<T> x2y2_vec = s2.x2 - s1.x2;
-		Vec2D<T> x1x2_normal = normal( x1x2_vec );
+		Vec2D<T> x_normal = normal( x_vec );
 
-		int x1y1_sign = geom::sign( cross( x1x2_normal, x1y1_vec ) );
-		int x1y2_sign = geom::sign( cross( x1x2_normal, x1y2_vec ) );
-		int x2y1_sign = geom::sign( cross( x1x2_normal, x2y1_vec ) );
-		int x2y2_sign = geom::sign( cross( x1x2_normal, x2y2_vec ) );
+		int x1y1_sign = geom::sign( cross( x_normal, x1y1_vec ) );
+		int x1y2_sign = geom::sign( cross( x_normal, x1y2_vec ) );
+		int x2y1_sign = geom::sign( cross( x_normal, x2y1_vec ) );
+		int x2y2_sign = geom::sign( cross( x_normal, x2y2_vec ) );
 
 		if ( x1y1_sign == x1y2_sign  && x1y2_sign == x2y1_sign && x2y1_sign == x2y2_sign ) {
-			return{ -1.0, -1.0 };
+			return{};
 		}
-
-		//std::cout << "Touching or intersecting parallel line segments:\n(" << fplus::show(x1) << "," << fplus::show(x2) << ")  <>  (" << fplus::show(y1) << "," << fplus::show(y2) << ")" << std::endl;
-		return{ -3,-3 };
-		assert( false );
-
-		//TODO:
-		/*
-		double vx1_angle = 0.0;//std::acos(std::abs(vx1_vec)/std::abs(vx2_vec));
-		double vx2_angle = std::atan(vec_length(x1x2_vec)/vec_length(vx1_vec));
-		double vy1_angle = std::atan(vec_length(x1y1_vec)/vec_length(vx1_vec));
-		double vy2_angle = std::atan(vec_length(x1y2_vec)/vec_length(vx1_vec));
-
-		double min_angle = std::min(vx1_angle, vx2_angle);
-		double max_angle = std::max(vx1_angle, vx2_angle);
-
-		if(vy1_angle < min_angle && vy2_angle < min_angle ){
-		return -1;
+		
+		if(allow_overlap == ALLOW_OVERLAP){
+			//TODO
+			return {-1,-1};
 		}
-		if(vy1_angle > max_angle && vy2_angle > max_angle ){
-		return -1;
+		else if(allow_overlap == ALLOW_TOUCHING){
+			//TODO
+			return {-1,-1}; 
 		}
-
-		assert(false);//TODO: collinear segments must not intersect or touch? (They will in refined polygons)
-		*/
+		else{
+			std::cout << "Touching or overlapping parallel line segments:\n(" << fplus::show(x1) << "," << fplus::show(x2) << ")  <>  (" << fplus::show(y1) << "," << fplus::show(y2) << ")" << std::endl;
+			assert(false); //Overlapping segments //TODO: Exception?
+		}
 	}
+}//namespace internal
 
-
-	//Given two line segments g1 = x1+s*(x2-x1), g2 = y1+t*(y2-y1), (t in [0,1]), the function returns the parameter s_0 in [0,1] such that x1+s_0*(x2-x1) is the intersection of g1 and g2, or -1 if they do notintersect.
+	//Given two line segments g1 = x1+s*(x2-x1), g2 = y1+t*(y2-y1), (s,t in [0,1]), the function returns the paramaeter pair s_0, t_0 (each in [0,1]) such that x1+s_0*(x2-x1) = y1+t_0*(y2-y1) is the intersection of g1 and g2, or (-1, -1) if they do not intersect.
 	template<typename T>
-	std::pair<double, double> segment_intersection( const LineSegment<T>& s1, const LineSegment<T>& s2 ) {
+	fplus::maybe<std::pair<double, double>> segment_intersection( const LineSegment<T>& s1, const LineSegment<T>& s2, int allow_overlap = ALLOW_NO_OVERLAP ) {
 		//Initialize some necessary vectors
+		Vec2D<T> x_vec = s1.x2 - s1.x1;
 		Vec2D<T> x1y1_vec = s2.x1 - s1.x1;
-		Vec2D<T> x1x2_vec = s1.x2 - s1.x1;
 		Vec2D<T> x1y2_vec = s2.x2 - s1.x1;
 
-		//Compute cross products between x and y1/y2, to see if y1 and y2 lie on same side
-		double cross_prod_x_y1 = cross( x1x2_vec, x1y1_vec );
-		/*
-		if ( cross_prod_x_y1 == 0.0 ) {
-		std::cout << "y1 auf Gerade x\n";
-		}
-		*/
-		double cross_prod_x_y2 = cross( x1x2_vec, x1y2_vec );
-		/*
-		if ( cross_prod_x_y1 == 0.0 ) {
-		std::cout << "y2 auf Gerade x\n";
-		}
-		*/
+		//Check if the segments are parallel
+		double cross_prod_x_y1 = cross( x_vec, x1y1_vec );
+		double cross_prod_x_y2 = cross( x_vec, x1y2_vec );
+
 		if ( geom::sign( cross_prod_x_y1 ) == geom::sign( cross_prod_x_y2 ) ) {
 			//y1 and y2 on same side of x1x2 (possibly on same line)
 			if ( geom::sign( cross_prod_x_y1 ) == 0 ) {
 				//On same line
-				return segments_on_line_intersection( s1, s2 );
+				return internal::segments_on_line_intersection( s1, s2, allow_overlap);
 			}
 			else {
+				//y1 and y2 on same side
 				return{ -1.0, -1.0 };
 			}
 		}
 
 		//If not, compute intersection as in https://rootllama.wordpress.com/2014/06/20/ray-line-segment-intersection-test-in-2d/
-		//where x1x2 equtes to the segment ab
 		Vec2D<T> y1y2_vec = s2.x2 - s2.x1;
-		//point d( normalize( { -y1y2_vec.second, y1y2_vec.first } ) );
 		Vec2D<T> d = perpendicular( y1y2_vec );
-		double scale = x1x2_vec * d;
-		assert( scale != 0.0 ); ///happens only if x & y are parallel
+		double scale = x_vec * d;
+		assert( scale != 0.0 ); ///happens only if x y are parallel
 
 		double s_0_y = cross_prod_x_y1 / scale;
 
 		if ( s_0_y < 0.0 || s_0_y > 1.0 ) {
-			return{ -1.0, -1.0 };
+			return{};
 		}
 
 		double s_0_x = x1y1_vec * d / scale;
 		if ( s_0_x > 1.0 || s_0_x < 0.0 ) {
-			return{ -1.0, -1.0 };
+			return{};
 		}
-		//s_0_x *= vec_length( y1y2_vec );
 
 		return{ s_0_x, s_0_y };
 	}
