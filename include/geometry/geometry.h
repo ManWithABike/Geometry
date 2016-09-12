@@ -235,8 +235,7 @@ Vec<T, N> operator/( const Vec<T, N>& vec, T divisor ) {
 
 template<typename T, std::size_t N>
 double norm( const Vec<T, N>& vec ) {
-	const auto null_vec = Vec<T, N>( 0 );
-	return std::sqrt( internal::compute_pythagoras<T, N, N - 1>::apply( vec, null_vec ) ); //TODO: Rather without pythagoras (unneccessary vec - 0) and instead recursive template operator vec1*vec2
+	return std::sqrt( vec*vec );
 }
 
 template<typename T, std::size_t N>
@@ -475,6 +474,21 @@ bool point_in_triangle( const Vec2D<T>& x, const Vec2D<T>& A, const Vec2D<T>& B,
 	auto v1 = B - A;
 	auto v2 = x - A;
 
+	//handle degenerate triangles
+	if ( cross(v1, v0 ) == 0 ) {
+		if ( !on_line_is_inside ) {
+			return false;
+		}
+		Vec2D<T> s1( A );
+		Vec2D<T> s2( (square_dist( A, B )<square_dist( A, C )) ? C : B );
+		if ( s1 == s2 ) {
+			return x == s1;
+		}
+		double t_x = (x[0] - s1[0]) / (s2[0] - s1[0]);
+		double t_y = (x[1] - s1[1]) / (s2[1] - s1[1]);
+		return t_x >= 0.0 && t_x <= 1.0 && geom::in_range( t_x, t_y );
+	}
+
 	// Compute dot products
 	auto dot00 = v0 * v0;
 	auto dot01 = v0 * v1;
@@ -527,6 +541,11 @@ bool point_in_polygon( const Vec2D<T>& x, const polygon<T>& p){
 //Calculates the convex hull of the given set of points
 template<typename T>
 std::vector<Vec2D<T>> convex_hull(const geom::point_cloud<T,2>& points){
+	//Simple cases
+	if ( points.size() < 3 ) {
+		return points;
+	}
+
 	//Search max, min of y,x
 	std::vector<Vec2D<T>> relevant_points;
 	Vec2D<T> left, top, right, bottom;
@@ -557,19 +576,24 @@ std::vector<Vec2D<T>> convex_hull(const geom::point_cloud<T,2>& points){
 
 	//Sort points into upper/lower half and delete irrelevant ones
 	std::vector<Vec2D<T>> relevant_points_upper;
-	std::vector<Vec2D<T>> relevant_points_lower;
+	std::vector<Vec2D<T>> relevant_points_lower( { left } );
 	double m = (right[1]-left[1]) / (right[0]-left[0]); ///y per x of middle line
+	
 	for(const auto& p : points){
-		if( p[1] > left[1] + m * (p[0] - left[0]) ) ///p above  middle line? The points left and right do not fulfill this, they are part of the lower hull
+		double y_cut = left[1] + m * (p[0] - left[0]);
+		if( p[1] > y_cut ) ///p above  middle line? The points left and right do not fulfill this, they are part of the lower hull
 		{
 			if( !point_in_triangle<T, false>(p, left, top, right)){
 				relevant_points_upper.push_back(p);
 			}
 		}
-		else if( !point_in_triangle<T, false>(p, left, bottom, right) ){
-			relevant_points_lower.push_back(p);
+		else if( p[1] < y_cut ){
+			if ( !point_in_triangle<T, false>( p, left, bottom, right ) ) {
+				relevant_points_lower.push_back( p );
+			}
 		}
 	}
+	relevant_points_lower.push_back( right );
 
 	//Sort relevant points by x-coordinate
     std::sort(std::begin(relevant_points_upper), std::end(relevant_points_upper),
@@ -587,14 +611,14 @@ std::vector<Vec2D<T>> convex_hull(const geom::point_cloud<T,2>& points){
 	//Compute the convex hull
 	std::vector<Vec2D<T>> hull;
 	hull.reserve( relevant_points_upper.size()+relevant_points_lower.size() );
+	
 	//lower
-
 	for(const auto& p : relevant_points_lower){
 	std::cout << p.print() << std::endl;
 		while(hull.size() >= 2 ){
 			auto p0 = hull[hull.size()-2];
 			auto p1 = hull[hull.size()-1];
-			if( cross( p1-p0, p-p0 ) < 0.0 ){
+			if( cross( p1-p0, p-p0 ) > 0.0 ){
 				hull.pop_back();
 			}
 			else{ break; }
@@ -614,7 +638,7 @@ std::vector<Vec2D<T>> convex_hull(const geom::point_cloud<T,2>& points){
 		while(hull.size() >= n_lower +2){
 			auto p0 = hull[hull.size()-2];
 			auto p1 = hull[hull.size()-1];
-			if( cross( p1-p0, p-p0 ) < 0.0 ){
+			if( cross( p1-p0, p-p0 ) > 0.0 ){
 				hull.pop_back();
 			}
 			else{ break; }

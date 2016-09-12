@@ -87,39 +87,58 @@ void test_angles() {
 	std::cout << "- angle tests successful" << std::endl;
 }
 
-void test_cvhull(){
-    std::vector<Vec2> p { {1,-1}, {-1,-1}, {-1,1}, {1,1}, };
-    auto hull = geom2d::convex_hull(p);
+void test_cvhull() {
+	std::vector<Vec2> p{ { 1,-1 },{ -1,-1 },{ -1,1 },{ 1,1 }, };
+	auto hull = geom2d::convex_hull( p );
 
-     assert( hull.size() == 4);
+	assert( hull.size() == 4 );
 
-    p.push_back( {0,0});
-	auto hull2 = geom2d::convex_hull(p);
+	p.push_back( { 0,0 } );
+	auto hull2 = geom2d::convex_hull( p );
 	assert( hull2 == hull );
 
-	p.push_back({0,-1});
-	assert( geom2d::convex_hull(p).size() == 5);
+	p.push_back( { 0,-1.000001 } );
+	hull = geom2d::convex_hull( p );
+	assert( hull.size() == 5 );
 
-	p.push_back({0,2});
-	assert( geom2d::convex_hull(p).size() == 6);
+	p.push_back( { 0,2 } );
+	assert( geom2d::convex_hull( p ).size() == 6 );
 
-	p.push_back({2,0});
-	assert( geom2d::convex_hull(p).size() == 7);
+	p.push_back( { 2,0 } );
+	assert( geom2d::convex_hull( p ).size() == 7 );
 
-	p.push_back({2,0});
-	assert( geom2d::convex_hull(p).size() == 8);
+	p.push_back( { 2,0 } );
+	assert( geom2d::convex_hull( p ).size() == 7 );
 
-    std::cout << "- convex hull tests successful" << std::endl;
+	p = { { 1.45622, 131.4252 },{ 141.13412424, 3526.2342134 } };
+	assert( geom2d::convex_hull( p ).size() == 2 && hull[0] != hull[1] );
+
+	p = { { 1324.124, 123.47 } };
+	assert( geom2d::convex_hull( p ).size() == 1 );
+
+	p = {};
+	assert( geom2d::convex_hull( p ).size() == 0 );
+
+	p = { { 0.0001,0.00010001 },{ 0.2,3.223 },{ 0,0 },{ 3.991, 5.001 },{ 9.9999999, 9.999999999999 },{ -0.1, 18.41324135 },{ 10,10 },{ 9,12 },{ 0,20 },{ -10,10 },{ -2,1.999999999 },{ -3, 4.555 } };
+	assert( geom2d::convex_hull( p ).size() == 6 );
+
+	std::cout << "- convex hull tests successful" << std::endl;
 }
 
-void test_point_in_polygon(){
-    std::vector<Vec2> p { {1,-1}, {-1,-1}, {-1,1}, {1,1}, };
-    assert( geom2d::point_in_polygon({0,0}, p) == true );
+void test_point_in_polygon() {
+	std::vector<Vec2> p{ { 1,-1 },{ -1,-1 },{ -1,1 },{ 1,1 }, };
+	assert( geom2d::point_in_polygon( { 0,0 }, p ) == true );
 
-	p  = { {0.0001,-0.0001}, {-0.0001,-0.0001}, {-0.0001,0.0001}, {0.0001,0.0001}, };
-    assert( geom2d::point_in_polygon({0.000001,-0.0000003}, p) == true );
+	p = { { 0.0001,-0.0001 },{ -0.0001,-0.0001 },{ -0.0001,0.0001 },{ 0.0001,0.0001 }, };
+	assert( geom2d::point_in_polygon( { 0.000001,-0.0000003 }, p ) == true );
 
-    std::cout << "- point in polygon tests successful" << std::endl;
+	p = { { 99,0 },{ 7,0 } };
+	assert( geom2d::point_in_polygon( { 99.0000000000001, 0 }, p ) == false );
+
+	p = { { 3,-1 },{ -1, -1 },{ -1,1 },{ 2,1 },{ 2,0 },{ 3,1 } };
+	assert( geom2d::point_in_polygon( { 0,0 }, p ) == true );
+
+	std::cout << "- point in polygon tests successful" << std::endl;
 }
 
 
