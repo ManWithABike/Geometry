@@ -12,34 +12,42 @@ Furthermore, it offers a namespace *geom2d::* with some convenient functions for
 
 **Ex1**  
 ```cpp
-#include "geometry.h"
+#include "geometry/geometry.h"
 #include <cassert>
 
-typedef geom::Vec<3,double> Vec; //All our vectors have three double coordinates
+typedef geom::Vec<double,3> Vec; //All our vectors have three double coordinates
 
-int main(){
-  Vec v1( 1.0, -1.0, -2.2 );
-  Vec v2( 3.0, 1.0, -0.2);
-  
-  Vec sub_v1v2 = v1 - v2; //sub_v1v2 == (-2.0, -2.0, -2.0 )
-  Vec normalised = geom::normalise(sub_v1v2); //normalised ==(-sqrt(1/3), -sqrt(1/3), -sqrt(1/3)
-  assert( geom::in_range( geom::norm(normalised), 1.0 ) ); //Double calculation isn't exact! Therefor, check result up to double precision
+int main() {
+	Vec v1( 1.0, -1.0, -2.2 );
+	Vec v2( 3.0, 1.0, -0.2 );
+
+	Vec sub_v1v2 = v1 - v2;
+	std::cout << "sub_v1v2: " << sub_v1v2.print() << std::endl; //sub_v1v2 == (-2.0, -2.0, -2.0 )
+	
+	Vec normalised = geom::normalize( sub_v1v2 );
+	std::cout << "sub_v1v2 normalised: " << sub_v1v2.print() << std::endl; //normalised ==(-sqrt(1/3), -sqrt(1/3), -sqrt(1/3)
+	
+	assert( geom::in_range( geom::norm( normalised ), 1.0 ) ); //Double calculation isn't exact! Therefor, check result up to double precision
+	
+	std::cout << "Example1 successful executed!" << std::endl;
 }
 ```
 
 
 **Ex2**  
 ```cpp
-#include "geometry.h"
+#include "geometry/geometry.h"
 
-typedef geom::Vec<2,int> Vec; //All our vectors have two integer coordinates
+typedef geom::Vec<int,2> Vec; //All our vectors have two integer coordinates
 
 int main(){
   Vec v1( 0, 0 );
   Vec v2( 2, 0 );
   Vec v3( 1, 1 );
-  polygon p (v1,v2,v3);
-  double polygon_area = geom2d::area(p); //polygon_area == 0.5
+  geom2d::polygon<int> p ( {v1,v2,v3} );
+
+  double polygon_area = geom2d::area(p);
+  std::cout << "Polygon area: " << polygon_area << std::endl; //polygon_area == 1
 }
 ```
 
