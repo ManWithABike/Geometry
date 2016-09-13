@@ -3,12 +3,14 @@ A small convenience header-only library for linear algebra.
 
 ##Dependencies, Installation, Usage
 **Dependencies:** None  
-**Installation:** Download the header files, include *geometry.h*, and you're ready to go.  
+**Installation:** Download the header file *geometry.h*, include it, and you're ready to go.  
 **Usage:** In namespace *geom::*, the library offers a struct for storing n-dimensional vectors in *R^n* or *Z^n* (i.e. with floating point- or integer coordinates) with several constructors, and overloads their operators.  
 Furthermore, it offers a namespace *geom2d::* with some convenient functions for two-dimensional algebra like *cross product*, *perpendicular* and *normal*, *angle calculation*, and higher level stuff like *segment intersection*, *polygon area* and *convex hull* calcuation.
 
 
 ##Examples
+You can find the example code in this repository in *test/examples/*.  
+To make them run as they are, include the *include* folder of this repository into your */usr/local/include* directory.
 
 **Ex1**  
 ```cpp
