@@ -76,6 +76,7 @@ struct Vec {
 	Vec( const std::initializer_list<T>& coord_list ) : coordinates( coord_list ) {
 		assert( coordinates.size() == N );
 	}
+	
 	template<typename = typename std::enable_if<N==2>>
 	Vec( T x, T y ) : coordinates( { x, y } ) {}
 
@@ -90,6 +91,16 @@ struct Vec {
 	T operator[] ( std::size_t n ) const {
 		assert( n < coordinates.size() );
 		return coordinates[n];
+	}
+
+	template< typename = typename std::enable_if< std::is_convertible<T,double>::value > > //TODO: not disabled from string to double?!
+	Vec<double, N> convert_to_doubles() {
+		std::vector<double> result;
+		result.reserve( N );
+		for ( const auto& x : coordinates ) {
+			result.push_back( static_cast<double>(x) );
+		}
+		return{ result };
 	}
 
     inline std::string print() const{
@@ -230,6 +241,12 @@ Vec<T, N> operator/( const Vec<T, N>& vec, T divisor ) {
 	return{ result };
 }
 
+template <typename T, std::size_t N>
+std::ostream& operator<<( std::ostream& os, const Vec<T,N>& vec ) {
+	os << vec.print();
+	return os;
+}
+
 
 
 
@@ -242,9 +259,12 @@ double norm( const Vec<T, N>& vec ) {
 	return std::sqrt( vec*vec );
 }
 
+
+//typename std::enable_if<std::is_convertible<T, double>>::value
 template<typename T, std::size_t N>
-Vec<T,N> normalize( const Vec<T,N>& vec ) {
+Vec<double,N> normalize( const Vec<double,N>& vec ) {
 	double length = norm( vec );
+	assert( !in_range( length, 0.0 ) ); ///You really should know better than normalizing a vector with length 0 just like that
 	return vec / length;
 }
 
@@ -257,8 +277,6 @@ template<typename T, std::size_t N>
 double dist( const Vec<T,N>& p1, const Vec<T,N>& p2 ) {
 	return std::sqrt( square_dist( p1, p2 ) );
 }
-
-
 
 }//namespace geom
 
