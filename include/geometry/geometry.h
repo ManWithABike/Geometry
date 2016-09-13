@@ -636,7 +636,6 @@ geom2d::polygon<T> convex_hull(const std::vector<Vec2D<T>>& points){ //TODO: ena
 	
 	//lower
 	for(const auto& p : relevant_points_lower){
-	std::cout << p.print() << std::endl;
 		while(hull.size() >= 2 ){
 			auto p0 = hull[hull.size()-2];
 			auto p1 = hull[hull.size()-1];
@@ -647,16 +646,10 @@ geom2d::polygon<T> convex_hull(const std::vector<Vec2D<T>>& points){ //TODO: ena
 		}
 		hull.push_back(p);
 	}
-	std::cout << "lower hull:\n";
-    for( const auto& x : hull){
-        std::cout << x.print() << " ; ";
-    }
-    std::cout << std::endl << std::endl;
 
 	//upper
 	std::size_t n_lower = hull.size();
 	for(const auto& p : relevant_points_upper){
-	std::cout << p.print() << std::endl;
 		while(hull.size() >= n_lower +2){
 			auto p0 = hull[hull.size()-2];
 			auto p1 = hull[hull.size()-1];
@@ -667,12 +660,6 @@ geom2d::polygon<T> convex_hull(const std::vector<Vec2D<T>>& points){ //TODO: ena
 		}
 		hull.push_back(p);
 	}
-
-    std::cout << "complete hull:\n";
-    for( const auto& x : hull){
-        std::cout << x.print() << " ; ";
-    }
-    std::cout << std::endl;
 
 	return hull;
 }
