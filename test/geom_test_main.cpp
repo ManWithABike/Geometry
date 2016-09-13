@@ -21,13 +21,13 @@ void test_basic_funcionality(){
 	//Compute Pythagoras & Operators
 	Vec3 vec3d_1{ { 0,1,2 } }; //Irgendwie moeglich hier die 3 zu deduzieren? (Laenge des uebergebenen Vektors)
 	Vec3 vec3d_2{ {-1,-1,-1} };
-	assert( geom::in_range( geom::internal::compute_pythagoras<double, 3, 2>::apply( vec3d_1, vec3d_2 ), 1 + 4 + 9 ) );
-	assert( geom::in_range( vec3d_1 * vec3d_2, -3 ) );
+	assert( geom::in_range( geom::internal::compute_pythagoras<double, 3, 2>::apply( vec3d_1, vec3d_2 ), 1.0 + 4.0 + 9.0 ) );
+	assert( geom::in_range( vec3d_1 * vec3d_2, -3.0 ) );
 
 	vec3d_1 = { { 4,-1,-7 } };
 	vec3d_2 = { { 3,-3,5 } };
-	assert( geom::in_range( geom::internal::compute_pythagoras<double, 3, 2>::apply( vec3d_1, vec3d_2 ), 1 + 4 + 144 ) );
-	assert( geom::in_range( vec3d_1 * vec3d_2, 12+3-35 ) );
+	assert( geom::in_range( geom::internal::compute_pythagoras<double, 3, 2>::apply( vec3d_1, vec3d_2 ), 1.0 + 4.0 + 144.0 ) );
+	assert( geom::in_range( vec3d_1 * vec3d_2, 12.0+3.0-35.0 ) );
 
 	geom::Vec<float, 5> vecf5_1{ {1.5f, 3.7f, -2.6f, 0.12f, -8.0f} };
 	geom::Vec<float, 5> vecf5_2{ {1.0f, 4.0f, 0.0f, -0.2f, -10.0f} };
@@ -53,7 +53,7 @@ void test_basic_funcionality(){
 	//Dist
 	vec3d_1 = { { 4,-1,-7 } };
 	vec3d_2 = { { 3,-3,5 } };
-	assert( geom::in_range( geom::square_dist( vec3d_1, vec3d_2 ), 1 * 1 + 2 * 2 + 12 * 12 ) );
+	assert( geom::in_range( geom::square_dist( vec3d_1, vec3d_2 ), 1.0 * 1.0 + 2.0 * 2.0 + 12.0 * 12.0 ) );
 
 	std::cout << "- basic functions test successful" << std::endl;
 }
