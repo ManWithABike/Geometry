@@ -49,10 +49,14 @@ inline bool in_range( double goal, double x ) {
 	return min <= x && x <= max;
 }
 
-bool in_range( float x, float goal ) {
+inline bool in_range( float x, float goal ) {
 	float min = std::nextafter( goal, -FLT_MAX );
 	float  max = std::nextafter( goal, FLT_MAX );
 	return min <= x && x <= max;
+}
+
+inline bool in_range( int x, int goal ) {
+	return x == goal;
 }
 
 
@@ -540,7 +544,7 @@ bool point_in_polygon( const Vec2D<T>& x, const polygon<T>& p){
 
 //Calculates the convex hull of the given set of points
 template<typename T>
-std::vector<Vec2D<T>> convex_hull(const geom::point_cloud<T,2>& points){
+geom2d::polygon<T> convex_hull(const std::vector<Vec2D<T>>& points){ //TODO: enable any stl container
 	//Simple cases
 	if ( points.size() < 3 ) {
 		return points;
