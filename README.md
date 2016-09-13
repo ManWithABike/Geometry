@@ -12,7 +12,7 @@ Furthermore, it offers a namespace *geom2d::* with some convenient functions for
 You can find the example code in this repository in *test/examples/*.  
 To make them run as they are, include the *include* folder of this repository into your */usr/local/include* directory.
 
-**Ex1**  
+**Ex1: Vector initialisation, operators, norm & dist**  
 ```cpp
 #include "geometry/geometry.h"
 #include <cassert>
@@ -36,7 +36,7 @@ int main() {
 ```
 
 
-**Ex2**  
+**Ex2: polygons & their area**  
 ```cpp
 #include "geometry/geometry.h"
 
@@ -54,7 +54,7 @@ int main(){
 ```
 
 
-**Ex3**  
+**Ex3: Point in polygon test & convex hull**  
 ```cpp
 #include "geometry/geometry.h"
 
