@@ -8,6 +8,7 @@
 #pragma once
 
 #include <vector>
+#include <array>
 #include <string>
 #include <cfloat> // DBL_MAX
 #include <cmath>
@@ -26,8 +27,8 @@ namespace geom {
 //constants
 ///////////
 
-constexpr double pi = 4.0 * std::atan( 1.0 );
-constexpr double e = std::exp( 1.0 );
+const double pi = 4.0 * std::atan( 1.0 );
+const double e = std::exp( 1.0 );
 
 
 //////////////////
@@ -66,19 +67,21 @@ inline bool in_range( int goal, int x ) {
 
 template <typename T, std::size_t N>
 struct Vec {
-	Vec( const std::array<T,N>& coords ) : coordinates(coords){}
+	Vec() : coordinates() {}
+	Vec( const std::array<T,N>& coords ) : coordinates(coords) {}
 	Vec( const Vec<T, N>& vec ) : coordinates(vec.coordinates) {}
-	Vec( const T& x ) : coordinates( N, x ) {}
-	Vec( const std::initializer_list<T>& coord_list ) : coordinates( coord_list ) {
-		assert( coordinates.size() == N );
+	Vec( const T& x ) : coordinates() {
+		coordinates.fill( x );
 	}
 	
 	template<typename = typename std::enable_if<N==2>>
-	Vec( T x, T y ) : coordinates( { x, y } ) {}
+	Vec( T a, T b ) : coordinates( { a, b } ) {}
 
 	template<typename = typename std::enable_if<N==3>>
-	Vec( T x, T y, T z ) : coordinates( { x, y, z } ) {}
+	Vec( T a, T b, T c ) : coordinates( { a, b, c } ) {}
 
+	template<typename = typename std::enable_if<N == 4>>
+	Vec( T a, T b, T c, T d ) : coordinates( { a, b, c, d } ) {}
 
 	std::size_t dimension() {
 		return coordinates.size;
@@ -194,7 +197,6 @@ Vec<T,N> operator+( const Vec<T,N>& lhs, const Vec<T,N>& rhs ) {
 template <typename T, std::size_t N>
 Vec<T, N> operator-( const Vec<T, N>& lhs, const Vec<T, N>& rhs ) {
 	std::array<T, N> result;
-	result.reserve( N );
 	for ( std::size_t i = 0; i < N; i++ ) {
 		result[i] = ( lhs[i] - rhs[i] );
 	}
@@ -252,7 +254,7 @@ double norm( const Vec<T, N>& vec ) {
 }
 
 //typename std::enable_if<std::is_convertible<T, double>>::value
-template<typename T, std::size_t N>
+template<std::size_t N>
 Vec<double,N> normalize( const Vec<double,N>& vec ) {
 	double length = norm( vec );
 	assert( !in_range( length, 0.0 ) ); ///You really should know better than normalizing a vector with length 0 just like that
@@ -398,6 +400,138 @@ namespace internal{
 			"{ " << s1.x1.print() << " ; " << s1.x2.print() << " }   <>   { " << s2.x1.print() << " ; " << s2.x2.print() << " }" << std::endl;
 			assert(false); //Overlapping segments //TODO: Exception?
 		}
+	}
+
+	//Computes the parallelogram with minimal area enclosing all points given
+	template<typename T>
+	geom2d::polygon<double> calc_min_encl_parallelogram( const geom::point_cloud<T,2>& points ) {
+		geom2d::polygon<T> convex_polygon = geom2d::convex_hull( points ).convert_to_doubles();
+
+		const auto distance = []( const geom2d::Vec2D<T>& p1, const geom2d::Vec2D<T>& p2, const geom2d::Vec2D<T>& p ) -> double {
+			auto p2mp1 = p2 - p1;
+			return std::abs( (p2mp1[1]*p.[0] - p2mp1.[0]*p.[1] + p2.[0]*p1.[1] - p2.[1]*p1.[0]) / std::sqrt( (p2mp1.[1]*p2mp1.[1]) + (p2mp1.[0]*p2mp1.[0]) ) );
+		};
+
+		const auto antipodal_pairs = [&distance]( const geom2d::polygon<T>& convex_polygon ) -> std::vector<std::size_t> {
+			assert( convex_polygon.size() >= 2 );
+			std::vector<std::size_t> idxs;
+			idxs.reserve( convex_polygon.size() );
+
+			auto p1 = convex_polygon[0];
+			auto p2 = convex_polygon[1];
+
+			std::size_t t( 0 );
+			double d_max( 0 );
+
+			for ( std::size_t p = 1; p < convex_polygon.size(); p++ ) {
+				double d = distance( p1, p2, convex_polygon[p] );
+				if ( d > d_max ) {
+					t = p; d_max = d;
+				}
+			}
+			idxs.push_back( t );
+
+			for ( std::size_t p = 1; p < convex_polygon.size(); p++ ) {
+				auto p1 = convex_polygon[p%convex_polygon.size()];
+				auto p2 = convex_polygon[(p + 1) % convex_polygon.size()];
+				auto _p = convex_polygon[t % convex_polygon.size()];
+				auto _pp = convex_polygon[(t + 1) % convex_polygon.size()];
+
+				while ( distance( p1, p2, _pp ) > distance( p1, p2, _p ) ) {
+					t = (t + 1) % convex_polygon.size();
+					_p = convex_polygon[t % convex_polygon.size()];
+					_pp = convex_polygon[(t + 1) % convex_polygon.size()];
+				}
+				idxs.push_back( t );
+			}
+
+			return idxs;
+		};
+
+		const auto parallel_vector = []( const geom2d::Vec2D<T>& a, const geom2d::Vec2D<T>& b, const geom2d::Vec2D<T>& c ) -> geom2d::Vec2D<T> {
+			cv::Point2d v0 = c - a;
+			cv::Point2d v1 = b - c;
+			return c - v0 - v1;
+		};
+
+		const auto line_intersection = []( const geom2d::Vec2D<T>& o1, const geom2d::Vec2D<T>& p1, const geom2d::Vec2D<T>& o2, const geom2d::Vec2D<T>& p2 ) -> geom2d::Vec2D<T> {
+			geom2d::Vec2D<T> x = o2 - o1;
+			geom2d::Vec2D<T> d1 = p1 - o1;
+			geom2d::Vec2D<T> d2 = p2 - o2;
+
+			double cross = d1.[0]*d2.[1] - d1.[1]*d2.[0];
+			assert( std::abs( cross ) > 1e-10 );
+		//	if ( std::abs( cross ) < 1e-10 )
+		//		return{}; //TODO
+
+			double t1 = (x.[0] * d2.[1] - x.[1] * d2.[0]) / cross;
+			return o1 + d1 * t1;
+		};
+
+		const auto compute_parallelogram = [&parallel_vector, &line_intersection, &distance]( const geom2d::polygon<T>& convex_polygon, const std::vector<std::size_t>& antipodal_indices, std::size_t z1, std::size_t z2 ) -> std::pair<double, geom2d::polygon<double>> {
+			const auto n = convex_polygon.size();
+			const auto p1 = convex_polygon[z1 % n];
+			const auto p2 = convex_polygon[(z1 + 1) % n];
+			const auto q1 = convex_polygon[z2 % n];
+			const auto q2 = convex_polygon[(z2 + 1) % n];
+			const auto ap1 = convex_polygon[antipodal_indices[z1 % n]];
+			const auto aq1 = convex_polygon[antipodal_indices[z2 % n]];
+			const auto ap2 = parallel_vector( p1, p2, ap1 );
+			const auto aq2 = parallel_vector( q1, q2, aq1 );
+
+			auto a = line_intersection( p1, p2, q1, q2 );
+			auto b = line_intersection( p1, p2, aq1, aq2 );
+			auto d = line_intersection( ap1, ap2, q1, q2 );
+			auto c = line_intersection( ap1, ap2, aq1, aq2 );
+
+			double s = distance( a, b, c ) * cv::norm( a - b );
+
+			return{ s, { a,b,c,d } };
+		};
+
+		std::size_t z2( 0 );
+		std::size_t n = convex_polygon.size();
+
+		const auto l = antipodal_pairs( convex_polygon );
+
+		double s0 = std::numeric_limits<double>::max();
+		geom2d::Vec2D<double> a0, b0, c0, d0;
+		std::size_t z10, z20;
+
+		for ( std::size_t z1 = 0; z1 < n; z1++ ) {
+			if ( z1 >= z2 ) {
+				z2 = z1 + 1;
+			}
+			auto p1 = convex_polygon[z1%n];
+			auto p2 = convex_polygon[(z1 + 1) % n];
+			auto a = convex_polygon[z2 % n];
+			auto b = convex_polygon[(z2 + 1) % n];
+			auto c = convex_polygon[l[z2%n]];
+			if ( distance( p1, p2, a ) >= distance( p1, p2, b ) ) {
+				continue;
+			}
+
+			while ( distance( p1, p2, c ) > distance( p1, p2, b ) ) {
+				z2 += 1;
+				a = convex_polygon[z2 % n];
+				b = convex_polygon[(z2 + 1) % n];
+				c = convex_polygon[l[z2%n]];
+			}
+
+			auto pal = compute_parallelogram( convex_polygon, l, z1, z2 );
+			assert( pal.second.size() == 4 );
+			double st = pal.first;
+			auto at = pal.second[0];
+			auto bt = pal.second[1];
+			auto ct = pal.second[2];
+			auto dt = pal.second[3];
+
+			if ( st < s0 ) {
+				s0 = st; a0 = at; b0 = bt; c0 = ct; d0 = dt; z10 = z1; z20 = z2;
+			}
+		}
+
+		return{ a0, b0, c0, d0 };
 	}
 }//namespace internal
 
@@ -654,7 +788,11 @@ geom2d::polygon<T> convex_hull(const geom::point_cloud<T,2>& points){ //TODO: en
 	return hull;
 }
 
-
+//Calculates the minimal enclosing parallelogram of the given set of points
+template<typename T>
+geom2d::polygon<double> min_enclosing_parallelogram( const geom::point_cloud<T, 2>& points ) {
+	return internal::calc_min_encl_parallelogram( points );
+}
 
 /////////////////////
 //Segment arithmetics

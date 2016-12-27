@@ -17,9 +17,10 @@ typedef geom::Vec<double, 3> Vec3;
 void test_basic_funcionality(){
 	//Vector initialization
 	const auto const_vec = geom::Vec<int,4>( 5 );
+	assert( const_vec[3] == 5 );
 
 	//Compute Pythagoras & Operators
-	Vec3 vec3d_1{ { 0,1,2 } }; //Irgendwie moeglich hier die 3 zu deduzieren? (Laenge des uebergebenen Vektors)
+	Vec3 vec3d_1{ { 0,1,2 } };
 	Vec3 vec3d_2{ {-1,-1,-1} };
 	assert( geom::in_range( geom::internal::compute_pythagoras<double, 3, 2>::apply( vec3d_1, vec3d_2 ), 1.0 + 4.0 + 9.0 ) );
 	assert( geom::in_range( vec3d_1 * vec3d_2, -3.0 ) );
@@ -42,12 +43,12 @@ void test_basic_funcionality(){
 	n = geom::norm( vec6d_1 );
 	assert( geom::in_range( n, std::sqrt( 1 + 4 + 9 + 16 + 25 + 36) ) );
 	
-	Vec2i v2( 1, 1);
+	Vec2i v2( 1, 1 );
 	double norm = geom::norm( v2 );
 	assert( geom::in_range( norm, std::sqrt( 2 ) ) );
 	
 	geom::Vec<bool, 2> cv1( true, false );
-	norm = geom::norm( geom::normalize<double>( cv1.convert_to_doubles() ) );
+	norm = geom::norm( geom::normalize( cv1.convert_to_doubles() ) );
 	assert( geom::in_range( norm, 1.0 ) );
 	
 	//Dist
@@ -148,6 +149,14 @@ void test_point_in_polygon() {
 	std::cout << "- point in polygon tests successful" << std::endl;
 }
 
+
+void test_ecl_parallelogram() {
+	std::vector<Vec2> p{ { 1,-1 },{ -1,-1 },{ -1,1 },{ 1,1 }, };
+	
+	//TODO
+
+	std::cout << "- enclosing parallelogram tests successful" << std::endl;
+}
 
 int main(){
     std::cout << "Starting *geom::* tests:" << std::endl;
