@@ -26,9 +26,8 @@ namespace geom {
 //constants
 ///////////
 
-const double pi = 4.0 * std::atan( 1.0 );
-
-const double e = std::exp( 1.0 );
+constexpr double pi = 4.0 * std::atan( 1.0 );
+constexpr double e = std::exp( 1.0 );
 
 
 //////////////////
@@ -49,13 +48,13 @@ inline bool in_range( double goal, double x ) {
 	return min <= x && x <= max;
 }
 
-inline bool in_range( float x, float goal ) {
+inline bool in_range(  float goal, float x ) {
 	float min = std::nextafter( goal, -FLT_MAX );
 	float  max = std::nextafter( goal, FLT_MAX );
 	return min <= x && x <= max;
 }
 
-inline bool in_range( int x, int goal ) {
+inline bool in_range( int goal, int x ) {
 	return x == goal;
 }
 
@@ -67,10 +66,7 @@ inline bool in_range( int x, int goal ) {
 
 template <typename T, std::size_t N>
 struct Vec {
-	Vec() : coordinates( N, 0 ) {};
-	Vec( const std::vector<T>& coords ) : coordinates(coords){
-		assert( coords.size() == N );
-	}
+	Vec( const std::array<T,N>& coords ) : coordinates(coords){}
 	Vec( const Vec<T, N>& vec ) : coordinates(vec.coordinates) {}
 	Vec( const T& x ) : coordinates( N, x ) {}
 	Vec( const std::initializer_list<T>& coord_list ) : coordinates( coord_list ) {
@@ -95,10 +91,9 @@ struct Vec {
 
 	template< typename = typename std::enable_if< std::is_convertible<T,double>::value > > //TODO: not disabled from string to double?!
 	Vec<double, N> convert_to_doubles() {
-		std::vector<double> result;
-		result.reserve( N );
-		for ( const auto& x : coordinates ) {
-			result.push_back( static_cast<double>(x) );
+		std::array<double, N> result;
+		for ( std::size_t i = 0; i < coordinates.size(); i++) {
+			result[i] = static_cast<double>(coordinates[i]);
 		}
 		return{ result };
 	}
@@ -112,7 +107,7 @@ struct Vec {
     }
 
 private:
-	std::vector<T> coordinates;
+	std::array<T, N> coordinates;
 };
 
 //make_vec because class template arguments (in their class constructors) cannot be deduced
@@ -189,20 +184,19 @@ bool operator != ( const Vec<T,N>& lhs, const Vec<T,N>& rhs ) {
 
 template <typename T, std::size_t N>
 Vec<T,N> operator+( const Vec<T,N>& lhs, const Vec<T,N>& rhs ) {
-	std::vector<T> result;
-	result.reserve( N );
+	std::array<T, N> result;
 	for ( std::size_t i = 0; i < N; i++ ) {
-		result.push_back( lhs[i] + rhs[i] );
+		result[i] = ( lhs[i] + rhs[i] );
 	}
 	return{ result };
 }
 
 template <typename T, std::size_t N>
 Vec<T, N> operator-( const Vec<T, N>& lhs, const Vec<T, N>& rhs ) {
-	std::vector<T> result;
+	std::array<T, N> result;
 	result.reserve( N );
 	for ( std::size_t i = 0; i < N; i++ ) {
-		result.push_back( lhs[i] - rhs[i] );
+		result[i] = ( lhs[i] - rhs[i] );
 	}
 	return{ result };
 }
@@ -218,10 +212,9 @@ T operator*( const Vec<T, N>& lhs, const Vec<T, N>& rhs ) {
 
 template <typename T, std::size_t N>
 Vec<T, N> operator*( const Vec<T,N>& vec, T factor ) {
-	std::vector<T> result;
-	result.reserve( N );
+	std::array<T, N> result;
 	for ( std::size_t i = 0; i < N; i++ ) {
-		result.push_back( vec[i] * factor );
+		result[i] = ( vec[i] * factor );
 	}
 	return{ result };
 }
@@ -233,10 +226,9 @@ Vec<T, N> operator*( T factor, const Vec<T, N>& vec) {
 
 template <typename T, std::size_t N>
 Vec<T, N> operator/( const Vec<T, N>& vec, T divisor ) {
-	std::vector<T> result;
-	result.reserve( N );
+	std::array<T, N> result;
 	for ( std::size_t i = 0; i < N; i++ ) {
-		result.push_back( vec[i] / divisor );
+		result[i] = ( vec[i] / divisor );
 	}
 	return{ result };
 }
@@ -258,7 +250,6 @@ template<typename T, std::size_t N>
 double norm( const Vec<T, N>& vec ) {
 	return std::sqrt( vec*vec );
 }
-
 
 //typename std::enable_if<std::is_convertible<T, double>>::value
 template<typename T, std::size_t N>
@@ -304,12 +295,11 @@ inline double rad_to_deg( double rad ) {
 
 inline double arc_to_angle( double circle_radius, double arc_length ) {
 	assert( circle_radius > 0.0 );
-	assert( arc_length >= 0.0 );
 	return arc_length * 180.0 / (geom::pi * circle_radius);
 }
 
 inline double angle_to_arc( double circle_radius, double angle ) {
-	assert( circle_radius > 0 );
+	assert( circle_radius > 0.0 );
 	return (geom::pi * circle_radius * angle) / 180.0;
 }
 
@@ -562,7 +552,7 @@ bool point_in_polygon( const Vec2D<T>& x, const polygon<T>& p){
 
 //Calculates the convex hull of the given set of points
 template<typename T>
-geom2d::polygon<T> convex_hull(const std::vector<Vec2D<T>>& points){ //TODO: enable any stl container
+geom2d::polygon<T> convex_hull(const geom::point_cloud<T,2>& points){ //TODO: enable any stl container
 	//Simple cases
 	if ( points.size() < 3 ) {
 		return points;
