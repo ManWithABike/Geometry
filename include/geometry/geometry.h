@@ -74,13 +74,13 @@ struct Vec {
 		coordinates.fill( x );
 	}
 	
-	template<typename = typename std::enable_if<N==2>>
+	template<std::size_t I = N, typename std::enable_if<I == 2, int>::type = 0 >
 	Vec( T a, T b ) : coordinates( { a, b } ) {}
 
-	template<typename = typename std::enable_if<N==3>>
+	template<std::size_t I = N, typename std::enable_if<I == 3, int>::type = 0 >
 	Vec( T a, T b, T c ) : coordinates( { a, b, c } ) {}
 
-	template<typename = typename std::enable_if<N == 4>>
+	template<std::size_t I = N, typename std::enable_if<I == 4, int>::type = 0 >
 	Vec( T a, T b, T c, T d ) : coordinates( { a, b, c, d } ) {}
 
 	std::size_t dimension() {
@@ -92,11 +92,35 @@ struct Vec {
 		return coordinates[n];
 	}
 
-	template< typename = typename std::enable_if< std::is_convertible<T,double>::value > > //TODO: not disabled from string to double?!
-	Vec<double, N> convert_to_doubles() {
+	template<std::size_t I = N, typename std::enable_if<(I==2||I==3), int>::type = 0 >
+	T x() const {
+		return coordinates[0];
+	}
+	
+	template< std::size_t I = N, typename std::enable_if<I==2||I==3, int>::type = 0 >
+	T y() const {
+		return coordinates[1];
+	}
+
+	template< std::size_t I = N, typename std::enable_if<I == 3, int>::type = 0 >
+	T z() const {
+		return coordinates[2];
+	}
+
+	//TODO: template< std::size_t N, typename U = T, typename std::enable_if< std::is_convertible<U, double>::value >
+	Vec<double, N> as_doubles() const {
 		std::array<double, N> result;
 		for ( std::size_t i = 0; i < coordinates.size(); i++) {
 			result[i] = static_cast<double>(coordinates[i]);
+		}
+		return{ result };
+	}
+
+	//TODO: template< typename U = T, typename std::enable_if< std::is_convertible<U, int>::value >::type = 0 >
+	Vec<int, N> round() const {
+		std::array<int, N> result;
+		for ( std::size_t i = 0; i < coordinates.size(); i++ ) {
+			result[i] = static_cast<int>(std::round( coordinates[i] ));
 		}
 		return{ result };
 	}
@@ -328,6 +352,13 @@ T cross( const Vec2D<T>& vec1, const Vec2D<T>& vec2 ) {
 
 
 
+////////////////////
+//Poijntcloud struct
+////////////////////
+template<typename T>
+using point_cloud = geom::point_cloud<T, 2>;
+
+
 ////////////////
 //Segment struct
 ////////////////
@@ -405,14 +436,19 @@ namespace internal{
 	//Computes the parallelogram with minimal area enclosing all points given
 	template<typename T>
 	geom2d::polygon<double> calc_min_encl_parallelogram( const geom::point_cloud<T,2>& points ) {
-		geom2d::polygon<T> convex_polygon = geom2d::convex_hull( points ).convert_to_doubles();
+		auto hull = geom2d::convex_hull( points );
+		geom2d::polygon<double> convex_polygon;
+		convex_polygon.reserve( hull.size() );
+		for ( const geom2d::Vec2D<T>& x : hull ) {
+			convex_polygon.push_back( x.as_doubles() );
+		}
 
-		const auto distance = []( const geom2d::Vec2D<T>& p1, const geom2d::Vec2D<T>& p2, const geom2d::Vec2D<T>& p ) -> double {
+		const auto distance = []( const geom2d::Vec2D<double>& p1, const geom2d::Vec2D<double>& p2, const geom2d::Vec2D<double>& p ) -> double {
 			auto p2mp1 = p2 - p1;
-			return std::abs( (p2mp1[1]*p.[0] - p2mp1.[0]*p.[1] + p2.[0]*p1.[1] - p2.[1]*p1.[0]) / std::sqrt( (p2mp1.[1]*p2mp1.[1]) + (p2mp1.[0]*p2mp1.[0]) ) );
+			return std::abs( (p2mp1[1]*p[0] - p2mp1[0]*p[1] + p2[0]*p1[1] - p2[1]*p1[0]) / std::sqrt( (p2mp1[1]*p2mp1[1]) + (p2mp1[0]*p2mp1[0]) ) );
 		};
 
-		const auto antipodal_pairs = [&distance]( const geom2d::polygon<T>& convex_polygon ) -> std::vector<std::size_t> {
+		const auto antipodal_pairs = [&distance]( const geom2d::polygon<double>& convex_polygon ) -> std::vector<std::size_t> {
 			assert( convex_polygon.size() >= 2 );
 			std::vector<std::size_t> idxs;
 			idxs.reserve( convex_polygon.size() );
@@ -448,27 +484,27 @@ namespace internal{
 			return idxs;
 		};
 
-		const auto parallel_vector = []( const geom2d::Vec2D<T>& a, const geom2d::Vec2D<T>& b, const geom2d::Vec2D<T>& c ) -> geom2d::Vec2D<T> {
-			cv::Point2d v0 = c - a;
-			cv::Point2d v1 = b - c;
+		const auto parallel_vector = []( const geom2d::Vec2D<double>& a, const geom2d::Vec2D<double>& b, const geom2d::Vec2D<double>& c ) -> geom2d::Vec2D<double> {
+			auto v0 = c - a;
+			auto v1 = b - c;
 			return c - v0 - v1;
 		};
 
-		const auto line_intersection = []( const geom2d::Vec2D<T>& o1, const geom2d::Vec2D<T>& p1, const geom2d::Vec2D<T>& o2, const geom2d::Vec2D<T>& p2 ) -> geom2d::Vec2D<T> {
-			geom2d::Vec2D<T> x = o2 - o1;
-			geom2d::Vec2D<T> d1 = p1 - o1;
-			geom2d::Vec2D<T> d2 = p2 - o2;
+		const auto line_intersection = []( const geom2d::Vec2D<double>& o1, const geom2d::Vec2D<double>& p1, const geom2d::Vec2D<double>& o2, const geom2d::Vec2D<double>& p2 ) -> geom2d::Vec2D<double> {
+			auto x = o2 - o1;
+			auto d1 = p1 - o1;
+			auto d2 = p2 - o2;
 
-			double cross = d1.[0]*d2.[1] - d1.[1]*d2.[0];
+			double cross = d1[0]*d2[1] - d1[1]*d2[0];
 			assert( std::abs( cross ) > 1e-10 );
 		//	if ( std::abs( cross ) < 1e-10 )
-		//		return{}; //TODO
+		//		return{};
 
-			double t1 = (x.[0] * d2.[1] - x.[1] * d2.[0]) / cross;
+			double t1 = (x[0] * d2[1] - x[1] * d2[0]) / cross;
 			return o1 + d1 * t1;
 		};
 
-		const auto compute_parallelogram = [&parallel_vector, &line_intersection, &distance]( const geom2d::polygon<T>& convex_polygon, const std::vector<std::size_t>& antipodal_indices, std::size_t z1, std::size_t z2 ) -> std::pair<double, geom2d::polygon<double>> {
+		const auto compute_parallelogram = [&parallel_vector, &line_intersection, &distance]( const geom2d::polygon<double>& convex_polygon, const std::vector<std::size_t>& antipodal_indices, std::size_t z1, std::size_t z2 ) -> std::pair<double, geom2d::polygon<double>> {
 			const auto n = convex_polygon.size();
 			const auto p1 = convex_polygon[z1 % n];
 			const auto p2 = convex_polygon[(z1 + 1) % n];
@@ -484,7 +520,7 @@ namespace internal{
 			auto d = line_intersection( ap1, ap2, q1, q2 );
 			auto c = line_intersection( ap1, ap2, aq1, aq2 );
 
-			double s = distance( a, b, c ) * cv::norm( a - b );
+			double s = distance( a, b, c ) * geom::dist( a, b );
 
 			return{ s, { a,b,c,d } };
 		};
@@ -613,8 +649,8 @@ double positive_angle( const Vec2D<T>& vec1, const Vec2D<T>& vec2 ) {
 ///////////////////////
 
 //Decides whether a point is inside a tiangle using barycentric coordinates
-template<typename T, bool on_line_is_inside>
-bool point_in_triangle( const Vec2D<T>& x, const Vec2D<T>& A, const Vec2D<T>& B, const Vec2D<T>& C){
+template<typename T>
+bool point_in_triangle( const Vec2D<T>& A, const Vec2D<T>& B, const Vec2D<T>& C, const Vec2D<T>& x, bool on_line_is_inside = false){
 	// Compute vectors
 	auto v0 = C - A;
 	auto v1 = B - A;
@@ -729,12 +765,12 @@ geom2d::polygon<T> convex_hull(const geom::point_cloud<T,2>& points){ //TODO: en
 		double y_cut = left[1] + m * (p[0] - left[0]);
 		if( p[1] > y_cut ) ///p above  middle line? The points left and right do not fulfill this, they are part of the lower hull
 		{
-			if( !point_in_triangle<T, false>(p, left, top, right)){
+			if( !point_in_triangle<T>(left, top, right, p)){
 				relevant_points_upper.push_back(p);
 			}
 		}
 		else if( p[1] < y_cut ){
-			if ( !point_in_triangle<T, false>( p, left, bottom, right ) ) {
+			if ( !point_in_triangle<T>( left, bottom, right, p ) ) {
 				relevant_points_lower.push_back( p );
 			}
 		}
@@ -793,6 +829,41 @@ template<typename T>
 geom2d::polygon<double> min_enclosing_parallelogram( const geom::point_cloud<T, 2>& points ) {
 	return internal::calc_min_encl_parallelogram( points );
 }
+
+
+//Calculates the bounding box (axis aligned) of a set of points. 
+//The returned polygon contains the 4 edges of the box
+template<typename T>
+geom2d::polygon<double> min_enclosing_parallelogram( const geom::point_cloud<T, 2>& points ) {
+	if ( points.empty() ) {
+		return{};
+	}
+
+	T x_max = points[0].x();
+	T x_min = points[0].x();
+	T y_min = points[0].y();
+	T y_max = points[0].y();
+
+	for ( const auto& p : points ) {
+		T x = p.x();
+		T y = p.y();
+		if ( x < x_min ) {
+			x_min = x;
+		}
+		else if ( x > x_max ) {
+			x_max = x;
+		}
+		if ( y < y_min ) {
+			y_min = y;
+		}
+		else if ( y > y_max ) {
+			y_max = y;
+		}
+	}
+
+	return{ {x_min, y_min}, {x_max, y_min}, {x_max, y_max}, {x_min, y_max} };
+}
+
 
 /////////////////////
 //Segment arithmetics
@@ -853,9 +924,13 @@ std::pair<double, double> segment_intersection( const LineSegment<T>& s1, const 
 //Computes the area of a non self-intersection polygon p as described in http://www.mathopenref.com/coordpolygonarea.html as application of https://en.wikipedia.org/wiki/Green%27s_theorem#Area_Calculation
 template <typename T>
 double area( const polygon<T>& p ) {
+	if ( p.size() < 3 ) return 0;
 	double area = 0.0;
 	for ( std::size_t i = 0; i <= p.size() - 2; i++ ) {
 		area += cross( p[i], p[i + 1] );
+	}
+	if ( p.back() != p.front() ) {
+		area += cross( p.back(), p.front() );
 	}
 	area = std::abs( area ) / 2.0;
 	return area;
