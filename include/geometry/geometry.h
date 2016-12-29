@@ -11,7 +11,6 @@
 #include <array>
 #include <string>
 #include <cfloat> // DBL_MAX
-#include <cmath>
 #include <algorithm>
 #include <iostream>
 #include <cassert>
@@ -31,6 +30,7 @@ const double pi = 4.0 * std::atan( 1.0 );
 const double e = std::exp( 1.0 );
 
 
+
 //////////////////
 //Helper functions
 //////////////////
@@ -43,9 +43,9 @@ inline int sign( int x ) {
 	return x == 0 ? 0 : (x<0 ? -1 : 1);
 }
 
-inline bool in_range( double goal, double x ) {
-	double min = std::nextafter( goal, -DBL_MAX );
-	double max = std::nextafter(goal, DBL_MAX );
+inline bool in_range( double goal, double x, int radius = 1) {
+	double min = goal - radius* (goal - std::nextafter( goal, -DBL_MAX ));
+	double max = goal + radius*(std::nextafter(goal, DBL_MAX ) - goal);
 	return min <= x && x <= max;
 }
 
@@ -59,6 +59,59 @@ inline bool in_range( int goal, int x ) {
 	return x == goal;
 }
 
+
+
+//////////////
+//Angle struct
+//////////////
+
+const enum struct AngleType { RAD = 0, DEG = 1 };
+
+inline double rad_to_deg( double rad ) {
+	return rad * 180 / pi;
+}
+
+inline double deg_to_rad( double deg ) {
+	return deg * pi / 180;
+}
+
+struct Angle {
+	Angle() : angle_radians( 0.0 ), angle_degrees( 0.0 ) {};
+	Angle( double value, AngleType type ) {
+		switch ( type ) {
+		case AngleType::RAD : {
+			angle_radians = value;
+			angle_degrees = rad_to_deg( value );
+			return;
+		}
+		case AngleType::DEG : {
+			angle_degrees = value;
+			angle_radians = deg_to_rad( value );
+			return;
+		}
+		}
+	}
+
+	double rad() const {
+		return angle_radians;
+	}
+	double deg() const {
+		return angle_degrees;
+	}
+
+	double arc_length( double circle_radius ) {
+		return circle_radius * rad();
+	}
+
+private:
+	double angle_radians;
+	double angle_degrees;
+};
+
+inline Angle arc_to_angle( double circle_radius, double arc_length ) {
+	assert( circle_radius > 0.0 );
+	return Angle( arc_length / circle_radius, AngleType::RAD );
+}
 
 
 ///////////////
@@ -303,31 +356,13 @@ double dist( const Vec<T,N>& p1, const Vec<T,N>& p2 ) {
 
 namespace geom2d {
 
+
+
 ///////////
 //Constants
 ///////////
 
-#define ALLOW_NO_OVERLAP 0
-#define ALLOW_TOUCHING 1
-#define ALLOW_OVERLAP 2
-
-//////////////////
-//Unit conversions
-//////////////////
-
-inline double rad_to_deg( double rad ) {
-	return rad * 180 / geom::pi;
-}
-
-inline double arc_to_angle( double circle_radius, double arc_length ) {
-	assert( circle_radius > 0.0 );
-	return arc_length * 180.0 / (geom::pi * circle_radius);
-}
-
-inline double angle_to_arc( double circle_radius, double angle ) {
-	assert( circle_radius > 0.0 );
-	return (geom::pi * circle_radius * angle) / 180.0;
-}
+enum struct OverlapStrategy { ALLOW_NO_OVERLAP = 0, ALLOW_TOUCHING = 1, ALLOW_OVERLAP = 2 };
 
 
 
@@ -353,7 +388,7 @@ T cross( const Vec2D<T>& vec1, const Vec2D<T>& vec2 ) {
 
 
 ////////////////////
-//Poijntcloud struct
+//Pointcloud struct
 ////////////////////
 template<typename T>
 using point_cloud = geom::point_cloud<T, 2>;
@@ -386,8 +421,9 @@ using polygon = std::vector<Vec2D<T>>;
 ///////////
 //Internals
 ///////////
-
-namespace internal{
+namespace internal
+{
+	
 
 	//Determines, whether or not a horizontal ray from x to the right intersects the segment s
 	template<typename T>
@@ -399,18 +435,18 @@ namespace internal{
 	}
 
 	template<typename T>
-	std::pair<double, double> segments_on_line_intersection( const LineSegment<T>& s1, const LineSegment<T>& s2, int allow_overlap ) {
+	std::pair<double, double> segments_on_line_intersection( const LineSegment<T>& s1, const LineSegment<T>& s2, OverlapStrategy strategy ) {
 		Vec2D<T> x_vec = s1.x2 - s1.x1;
 		Vec2D<T> x1y1_vec = s2.x1 - s1.x1;
 		Vec2D<T> x1y2_vec = s2.x2 - s1.x1;
 		Vec2D<T> x2y1_vec = s2.x1 - s1.x2;
 		Vec2D<T> x2y2_vec = s2.x2 - s1.x2;
-		Vec2D<T> x_normal = normal( x_vec );
+		Vec2D<double> x_normal = normal( x_vec.as_doubles() );
 
-		int x1y1_sign = geom::sign( cross( x_normal, x1y1_vec ) );
-		int x1y2_sign = geom::sign( cross( x_normal, x1y2_vec ) );
-		int x2y1_sign = geom::sign( cross( x_normal, x2y1_vec ) );
-		int x2y2_sign = geom::sign( cross( x_normal, x2y2_vec ) );
+		int x1y1_sign = geom::sign( cross( x_normal, x1y1_vec.as_doubles() ) );
+		int x1y2_sign = geom::sign( cross( x_normal, x1y2_vec.as_doubles() ) );
+		int x2y1_sign = geom::sign( cross( x_normal, x2y1_vec.as_doubles() ) );
+		int x2y2_sign = geom::sign( cross( x_normal, x2y2_vec.as_doubles() ) );
 
 		if ( x1y1_sign == x1y2_sign  && x1y2_sign == x2y1_sign && x2y1_sign == x2y2_sign ) {
             //no intersection, because y1&y2 on the same side of the normal
@@ -418,18 +454,50 @@ namespace internal{
 			return {-1,-1};
 		}
 
-		if(allow_overlap == ALLOW_OVERLAP){
-			//TODO
-			return {-1,-1};
+		std::vector<int> signs( { x1y1_sign, x1y2_sign, x2y1_sign, x2y2_sign } );
+		int neg = 0; int zeros = 0; int pos = 0;
+		for ( const auto& sign : signs ) {
+			if ( sign == 0 ) {zeros++;}
+			else if ( sign < 0 ) {neg++;}
+			else {pos++;}
 		}
-		else if(allow_overlap == ALLOW_TOUCHING){
-			//TODO
-			return {-1,-1};
+		assert( neg + pos + zeros == 4 ); ///sanity check
+
+		if ( zeros == 1 && (neg == 0 || pos == 0) && strategy >= OverlapStrategy::ALLOW_TOUCHING ) {
+			if ( x1y1_sign == 0 ) { return{ 0,0 }; }
+			if ( x1y2_sign == 0 ) { return{ 0,1 }; }
+			if ( x2y1_sign == 0 ) { return{ 1,0 }; }
+			if ( x2y2_sign == 0 ) { return{ 1,1 }; }
+			
+			throw(std::invalid_argument( "Overlapping line segments, which are not allowed" ));// +"{ " + s1.x1.print() + " ; " + s1.x2.print() + " }   <>   { " + s2.x1.print() + " ; " + s2.x2.print() + " }" ) );
 		}
-		else{
-			std::cout << "Touching or overlapping parallel line segments, which have not been allowed:\n"
-			"{ " << s1.x1.print() << " ; " << s1.x2.print() << " }   <>   { " << s2.x1.print() << " ; " << s2.x2.print() << " }" << std::endl;
-			assert(false); //Overlapping segments //TODO: Exception?
+
+		else if( strategy == OverlapStrategy::ALLOW_OVERLAP){
+			//Return parameters of the middle of the overlapping segment
+
+			//case 1: s2 completely in s1
+			if ( (x1y1_sign >= 0 && x1y2_sign >= 0 && x2y1_sign <= 0 && x2y2_sign <= 0) 
+				 || (x1y1_sign <= 0 && x1y2_sign <= 0 && x2y1_sign >= 0 && x2y2_sign >= 0) ) {
+				auto s2_middle = s2.x1.as_doubles() + (s2.x2-s2.x1).as_doubles()/2.0;
+				return{ geom::dist(s2_middle, s1.x1.as_doubles()) / geom::norm(x_vec), 0.5 };
+			}
+			//case 2: s1 completely in s2
+			if ( (x1y1_sign <= 0 && x1y2_sign >= 0 && x2y1_sign <= 0 && x2y2_sign >= 0)
+				 || (x1y1_sign >= 0 && x1y2_sign <= 0 && x2y1_sign >= 0 && x2y2_sign <= 0) ) {
+				auto s1_middle = s1.x1.as_doubles() + (s1.x2 - s1.x1).as_doubles()/2.0;
+				return{ 0.5, geom::dist( s1_middle, s2.x1.as_doubles() ) / geom::dist( s2.x1, s2.x2 ) };
+			}
+			//case 3: 
+			auto p1 = (x1y1_sign == x1y2_sign) ? s1.x2 : s1.x1;
+			auto p2 = (x1y1_sign == x2y1_sign) ? s2.x2 : s2.x1;
+			auto overlap_middle = p1.as_doubles() + (p2 - p1).as_doubles() / 2.0;
+			return {geom::dist( overlap_middle, s1.x1.as_doubles() ) / geom::dist( s1.x1, s1.x2 ),
+					geom::dist( overlap_middle, s2.x1.as_doubles() ) / geom::dist( s2.x1, s2.x2 )};
+		}
+		
+		else {
+			throw(std::invalid_argument( "Touching or overlapping parallel line segments, which are not allowed" ));// + "{ " + s1.x1.print() + " ; " + s1.x2.print() + " }   <>   { " + s2.x1.print() + " ; " + s2.x2.print() + " }" ));
+			assert( false ); //Overlapping segments //TODO: Exception?
 		}
 	}
 
@@ -584,8 +652,7 @@ Vec2D<T> perpendicular( const Vec2D<T>& vec ) {
 }
 
 //Computes the vector rotated 90 deg counter-clockwise and normalizes it to length 1
-template<typename T>
-Vec2D<T> normal( const Vec2D<T>& vec ) {
+inline Vec2D<double> normal( const Vec2D<double>& vec ) {
 	return normalize( perpendicular( vec ) );
 }
 
@@ -600,14 +667,13 @@ anlge( {1,0}, {0,-1} ) == 90
 anlge( {1,0}, {-2,-1} ) == 153.435
 */
 template<typename T>
-double enclosed_angle( Vec2D<T> vec1, Vec2D<T> vec2 ) {
+geom::Angle enclosed_angle( Vec2D<T> vec1, Vec2D<T> vec2 ) {
 	double prod = vec1 * vec2;
 	double norm1 = norm( vec1 );
 	double norm2 = norm( vec2 );
 	double arg = prod / (norm1 * norm2);
 	double angle = std::acos( arg );
-	angle = rad_to_deg( angle );
-	return angle;
+	return geom::Angle(angle, geom::AngleType::RAD);
 }
 
 /**Computes the angle (in (-180,180]) between two vectors, measured counter-clockwise from the first vector ("vec1").
@@ -620,10 +686,10 @@ anlge( {1,0}, {-1,-1} ) == -135.0
 anlge( {1,0}, {-2,-1} ) == -153.435
 */
 template<typename T>
-double angle( const Vec2D<T>& vec1, const Vec2D<T>& vec2 ) {
-	double angle = enclosed_angle( vec1, vec2 );
+geom::Angle angle( const Vec2D<T>& vec1, const Vec2D<T>& vec2 ) {
+	geom::Angle angle = enclosed_angle( vec1, vec2 );
 	double side = cross( vec1, vec2 );
-	return (side >= 0.0) ? angle : -angle;
+	return (side >= 0.0) ? angle : geom::Angle( -angle.deg(), geom::AngleType::DEG );
 }
 
 /**Computes the angle (in [0,360]) between two vectors, measured counter-clockwise from the first vector ("vec1").
@@ -636,10 +702,9 @@ anlge( {1,0}, {-2,-1} ) == 206.565
 anlge( {1,0}, {0,-1} ) == 270
 */
 template<typename T>
-double positive_angle( const Vec2D<T>& vec1, const Vec2D<T>& vec2 ) {
-	double angle = geom2d::angle( vec1, vec2 );
-	double side = cross( vec1, vec2 );
-	return (side >= 0.0) ? angle : (360.0 + angle);
+geom::Angle positive_angle( const Vec2D<T>& vec1, const Vec2D<T>& vec2 ) {
+	geom::Angle angle = geom2d::angle( vec1, vec2 );
+	return (angle.deg() >= 0.0) ? angle : geom::Angle(360.0 + angle.deg(), geom::AngleType::DEG);
 }
 
 
@@ -834,7 +899,7 @@ geom2d::polygon<double> min_enclosing_parallelogram( const geom::point_cloud<T, 
 //Calculates the bounding box (axis aligned) of a set of points. 
 //The returned polygon contains the 4 edges of the box
 template<typename T>
-geom2d::polygon<double> min_enclosing_parallelogram( const geom::point_cloud<T, 2>& points ) {
+geom2d::polygon<double> bonding_box( const geom::point_cloud<T, 2>& points ) {
 	if ( points.empty() ) {
 		return{};
 	}
@@ -873,7 +938,7 @@ geom2d::polygon<double> min_enclosing_parallelogram( const geom::point_cloud<T, 
 
 //Given two line segments g1 = x1+s*(x2-x1), g2 = y1+t*(y2-y1), (s,t in [0,1]), the function returns the paramaeter pair s_0, t_0 (each in [0,1]) such that x1+s_0*(x2-x1) = y1+t_0*(y2-y1) is the intersection of g1 and g2, or (-1, -1) if they do not intersect.
 template<typename T>
-std::pair<double, double> segment_intersection( const LineSegment<T>& s1, const LineSegment<T>& s2, int allow_overlap = ALLOW_NO_OVERLAP ) {
+std::pair<double, double> segment_intersection( const LineSegment<T>& s1, const LineSegment<T>& s2, OverlapStrategy overlap ) {
 	//Initialize some necessary vectors
 	Vec2D<T> x_vec = s1.x2 - s1.x1;
 	Vec2D<T> x1y1_vec = s2.x1 - s1.x1;
@@ -887,7 +952,7 @@ std::pair<double, double> segment_intersection( const LineSegment<T>& s1, const 
 		//y1 and y2 on same side of x1x2 (possibly on same line)
 		if ( geom::sign( cross_prod_x_y1 ) == 0 ) {
 			//On same line
-			return internal::segments_on_line_intersection( s1, s2, allow_overlap);
+			return internal::segments_on_line_intersection( s1, s2, overlap );
 		}
 		else {
 			//parallel but not on same line -> no intersection
@@ -946,6 +1011,73 @@ Vec2D<double> centroid( const polygon<T>& p ) {
     }
     return {x/p.size(), y/p.size()};
 }
+
+
+
+//////////////////
+//Rectangle struct
+//////////////////
+
+struct Rectangle {
+	//Create an up-right (i.e. axis aligned) rectangle by giving the bottom-left and top-right corner
+	Rectangle( const Vec2D<double>& bottom_left, const Vec2D<double>& top_right ) : x1( bottom_left ), x2( top_right.x(), bottom_left.y() ), x3( top_right ), x4( bottom_left.x(), top_right.y() ), angle( geom::Angle() ) {};
+
+	//Create a rectangle from two points forming the first edge, and the length of the second edge.
+	//The Flag p1_p2_counterclockwise indicates whether p1 p2 lie counterclockwise along the perimeter of the rectangle. I.e., if the second edge turns left or right when walking along the first edge from p1 to p2.
+	Rectangle( const Vec2D<double>& p1, const Vec2D<double>& p2, double edge2_length, bool p1_p2_counterclockwise ) {
+		auto n = geom2d::normal( p2 - p1 );
+		if ( p1_p2_counterclockwise ) {
+			x1 = p1;
+			x2 = p2;
+			x3 = p2 + (n* edge2_length);
+			x4 = p1 + (n * edge2_length);
+		}
+		else {
+			x1 = p1;
+			x2 = p1 - (n * edge2_length);
+			x3 = p2 - (n * edge2_length);
+			x4 = p2;
+		}
+
+		const auto side_center = x1 + (x2 - x1) / 2.0;
+		const auto center = centroid();
+		const auto side_median = (x1 - center) + (x2 - center);
+		assert( geom::in_range( cross( side_center - center, side_median ), 0.0 ) ); //TODO: delete debug assertion
+
+		const auto total_angle = geom2d::positive_angle( { 1,0 }, side_median );
+		const auto axis_angle_deg = std::fmod( total_angle.deg(), 90.0 );
+		const auto rect_angle_deg = axis_angle_deg > 45.0 ? axis_angle_deg - 90 : axis_angle_deg;
+
+		angle = geom::Angle( rect_angle_deg, geom::AngleType::DEG );
+	};
+
+	//Copy constructor
+	Rectangle( const Rectangle& rect ) : x1( rect.x1 ), x2( rect.x2 ), x3( rect.x3 ), x4( rect.x4 ) {};
+
+
+	double perimeter() const {
+		return (geom::dist( x1, x2 ) + geom::dist( x2, x3 )) * 2;
+	}
+
+	Vec2D<double> centroid() const {
+		return (x1 + x2 + x3 + x4) / 4.0;
+	}
+
+	//Returns the corners of the rectangle in counter-clockwise order
+	std::array<Vec2D<double>, 4> points() const {
+		return{ x1,x2,x3,x4 };
+	}
+
+	//Represents the deflection of the angle.
+	//I.e. the minimal rotation necessary to align the rect along the axis, is (-1)*rect.angle
+	geom::Angle angle;
+
+private:
+	Vec2D<double> x1;
+	Vec2D<double> x2;
+	Vec2D<double> x3;
+	Vec2D<double> x4;
+};
 
 
 }//namespace geom2d

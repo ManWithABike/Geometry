@@ -80,34 +80,34 @@ void test_angles() {
 	geom2d::Vec2D<double> vec1{ 1,0 };
 	geom2d::Vec2D<double> vec2{ 10,0 };
 
-	assert( geom2d::angle( vec1, vec2 ) == 0.0 );
-	assert( geom2d::enclosed_angle( vec1, vec2 ) == 0.0 );
-	assert( geom2d::positive_angle( vec1, vec2 ) == 0.0 );
+	assert( geom2d::angle( vec1, vec2 ).deg() == 0.0 );
+	assert( geom2d::enclosed_angle( vec1, vec2 ).deg() == 0.0 );
+	assert( geom2d::positive_angle( vec1, vec2 ).deg() == 0.0 );
 
 	vec2 = { 1,1 };
-	assert( geom::in_range( geom2d::angle( vec1, vec2 ), 45.0 ) );
-	assert( geom::in_range( geom2d::enclosed_angle( vec1, vec2 ), 45.0 ) );
-	assert( geom::in_range( geom2d::positive_angle( vec1, vec2 ), 45.0 ) );
+	assert( geom::in_range( geom2d::angle( vec1, vec2 ).deg(), 45.0 ) );
+	assert( geom::in_range( geom2d::enclosed_angle( vec1, vec2 ).deg(), 45.0 ) );
+	assert( geom::in_range( geom2d::positive_angle( vec1, vec2 ).deg(), 45.0 ) );
 
 	vec2 = { -1,-1 };
-	assert( geom::in_range( geom2d::angle( vec1, vec2 ), -135.0) );
-	assert( geom::in_range( geom2d::enclosed_angle( vec1, vec2 ), 135.0) );
-	assert( geom::in_range( geom2d::positive_angle( vec1, vec2 ), 225.0) );
+	assert( geom::in_range( geom2d::angle( vec1, vec2 ).deg(), -135.0) );
+	assert( geom::in_range( geom2d::enclosed_angle( vec1, vec2 ).deg(), 135.0) );
+	assert( geom::in_range( geom2d::positive_angle( vec1, vec2 ).deg(), 225.0) );
 
 	vec2 = { -2,0 };
-	assert( geom::in_range( geom2d::angle( vec1, vec2 ), 180.0) );
-	assert( geom::in_range( geom2d::enclosed_angle( vec1, vec2 ), 180.0) );
-	assert( geom::in_range( geom2d::positive_angle( vec1, vec2 ), 180.0) );
+	assert( geom::in_range( geom2d::angle( vec1, vec2 ).deg(), 180.0) );
+	assert( geom::in_range( geom2d::enclosed_angle( vec1, vec2 ).deg(), 180.0) );
+	assert( geom::in_range( geom2d::positive_angle( vec1, vec2 ).deg(), 180.0) );
 
 	vec2 = { 0,-1 };
-	assert( geom::in_range (geom2d::angle( vec1, vec2 ), -90.0 ) );
-	assert( geom::in_range (geom2d::enclosed_angle( vec1, vec2 ), 90.0) );
-	assert( geom::in_range (geom2d::positive_angle( vec1, vec2 ), 270.0) );
+	assert( geom::in_range (geom2d::angle( vec1, vec2 ).deg(), -90.0 ) );
+	assert( geom::in_range (geom2d::enclosed_angle( vec1, vec2 ).deg(), 90.0) );
+	assert( geom::in_range (geom2d::positive_angle( vec1, vec2 ).deg(), 270.0) );
 
 	vec2 = { -2,-1 };
-	assert( geom::in_range( geom2d::angle( vec1, vec2 ), -153.43494882292202 ) );
-	assert( geom::in_range( geom2d::enclosed_angle( vec1, vec2 ), 153.43494882292202 ) );
-	assert( geom::in_range( geom2d::positive_angle( vec1, vec2 ), 360 - 153.43494882292202 ) );
+	assert( geom::in_range( geom2d::angle( vec1, vec2 ).deg(), -153.43494882292202 ) );
+	assert( geom::in_range( geom2d::enclosed_angle( vec1, vec2 ).deg(), 153.43494882292202 ) );
+	assert( geom::in_range( geom2d::positive_angle( vec1, vec2 ).deg(), 360 - 153.43494882292202 ) );
 
 	std::cout << "- angle tests successful" << std::endl;
 }
@@ -217,6 +217,38 @@ void test_polygon_area() {
 		auto A = geom2d::area( p );
 		assert( geom::in_range( A, 217882.0 ) );
 	}
+
+	std::cout << "- polygonarea tests successful" << std::endl;
+}
+
+void test_rectangles() {
+	auto rect = geom2d::Rectangle( { 1,1 }, { 0,0 }, std::sqrt(2), true );
+	assert( geom::in_range( rect.angle.deg(), 45.0 ) );
+
+	rect = geom2d::Rectangle( { 1,0 }, { 0,0 }, std::sqrt( 1 ), true );
+	assert( geom::in_range( rect.angle.deg(), 0.0 ) );
+
+	rect = geom2d::Rectangle( { 1,1 }, { 0,0 }, std::sqrt( 2 ), false );
+	assert( geom::in_range( rect.angle.deg(), -45.0 ) );
+
+	rect = geom2d::Rectangle( { 1,0 }, { 0,0 }, std::sqrt( 1 ), false );
+	assert( geom::in_range( rect.angle.deg(), 0.0 ) );
+
+	rect = geom2d::Rectangle( { 10,10 }, { 0,10 }, 10, true );
+	assert( geom::in_range( rect.angle.deg(), 0.0 ) );
+	assert( geom::in_range( rect.points()[2].x(), 0.0 ) );
+	assert( geom::in_range( rect.points()[2].y(), 0.0 ) );
+	assert( geom::in_range( rect.points()[3].x(), 10.0 ) );
+	assert( geom::in_range( rect.points()[3].y(), 0.0 ) );
+
+	rect = geom2d::Rectangle( { 1,1 }, { 0,0 }, 1, true );
+
+	rect = geom2d::Rectangle( { 1,2 }, { 0,1 }, std::sqrt(2), true );
+	assert( geom::in_range( rect.angle.deg(), 45.0 ) );
+	assert( geom::in_range( rect.centroid().x(), 1.0 ) );
+	assert( geom::in_range( rect.centroid().y(), 1.0 ) );
+
+	std::cout << "- rectangle tests successful" << std::endl;
 }
 
 void test_encl_parallelogram() {
@@ -257,6 +289,119 @@ void test_encl_parallelogram() {
 	std::cout << "- enclosing parallelogram tests successful" << std::endl;
 }
 
+void test_segment_intersections() {
+	geom2d::LineSegment<int> s1( { {-1,0},{1,0} } );
+	geom2d::LineSegment<int> s2( { { -1,1 },{ 1,1 } } );
+	auto i = geom2d::segment_intersection( s1, s2, geom2d::OverlapStrategy::ALLOW_OVERLAP );
+	assert( geom::in_range( i.first, -1.0 ) && geom::in_range( i.second, -1.0 ) );
+
+	s2 = { { 0,1 },{ 1,-1 } };
+	i = geom2d::segment_intersection( s1, s2, geom2d::OverlapStrategy::ALLOW_OVERLAP );
+	assert( geom::in_range( i.first, 0.75 ) && geom::in_range( i.second, 0.5 ) );
+
+	s2 = { { 1,1 },{ -1,-1 } };
+	i = geom2d::segment_intersection( s1, s2, geom2d::OverlapStrategy::ALLOW_OVERLAP );
+	assert( geom::in_range( i.first, 0.5 ) && geom::in_range( i.second, 0.5 ) );
+
+	//identical
+	s2 = { { -1,0 },{ 1, 0 } };
+	i = geom2d::segment_intersection( s1, s2, geom2d::OverlapStrategy::ALLOW_OVERLAP );
+	assert( geom::in_range( i.first, 0.5 ) && geom::in_range( i.second, 0.5 ) );
+
+	i = geom2d::segment_intersection( s2, s1, geom2d::OverlapStrategy::ALLOW_OVERLAP );
+	assert( geom::in_range( i.first, 0.5 ) && geom::in_range( i.second, 0.5 ) );
+
+	//s1 in s2
+	s2 = { { -2,0 },{ 1, 0 } };
+	i = geom2d::segment_intersection( s1, s2, geom2d::OverlapStrategy::ALLOW_OVERLAP );
+	assert( geom::in_range( i.first, 0.5 ) && geom::in_range( i.second, 2.0/3.0 ) );
+
+	s2 = { { 1,0 },{ -2, 0 } };
+	i = geom2d::segment_intersection( s1, s2, geom2d::OverlapStrategy::ALLOW_OVERLAP );
+	assert( geom::in_range( i.first, 0.5 ) && geom::in_range( i.second, 1.0 / 3.0 ) );
+
+	s2 = { { -1,0 },{ 2, 0 } };
+	i = geom2d::segment_intersection( s1, s2, geom2d::OverlapStrategy::ALLOW_OVERLAP );
+	assert( geom::in_range( i.first, 0.5 ) && geom::in_range( i.second, 1.0 / 3.0 ) );
+
+	s2 = { { 2,0 },{ -1, 0 } };
+	i = geom2d::segment_intersection( s1, s2, geom2d::OverlapStrategy::ALLOW_OVERLAP );
+	assert( geom::in_range( i.first, 0.5 ) && geom::in_range( i.second, 2.0 / 3.0 ) );
+
+	s2 = { { -2,0 },{ 2, 0 } };
+	i = geom2d::segment_intersection( s1, s2, geom2d::OverlapStrategy::ALLOW_OVERLAP );
+	assert( geom::in_range( i.first, 0.5 ) && geom::in_range( i.second, 0.5 ) );
+
+	s2 = { { 2,0 },{ -2, 0 } };
+	i = geom2d::segment_intersection( s1, s2, geom2d::OverlapStrategy::ALLOW_OVERLAP );
+	assert( geom::in_range( i.first, 0.5 ) && geom::in_range( i.second, 0.5 ) );
+
+	//overlapping
+	s2 = { { -2,0 },{ 0, 0 } };
+	i = geom2d::segment_intersection( s1, s2, geom2d::OverlapStrategy::ALLOW_OVERLAP );
+	assert( geom::in_range( i.first, 0.25 ) && geom::in_range( i.second, 0.75 ) );
+
+	s2 = { { 0,0 },{ -2, 0 } };
+	i = geom2d::segment_intersection( s1, s2, geom2d::OverlapStrategy::ALLOW_OVERLAP );
+	assert( geom::in_range( i.first, 0.25 ) && geom::in_range( i.second, 0.25 ) );
+
+	s2 = { { -2,0 },{ 0, 0 } };
+	i = geom2d::segment_intersection( s2, s1, geom2d::OverlapStrategy::ALLOW_OVERLAP );
+	assert( geom::in_range( i.first, 0.75 ) && geom::in_range( i.second, 0.25 ) );
+
+	s2 = { { 0,0 },{ -2, 0 } };
+	i = geom2d::segment_intersection( s2, s1, geom2d::OverlapStrategy::ALLOW_OVERLAP );
+	assert( geom::in_range( i.first, 0.25 ) && geom::in_range( i.second, 0.25 ) );
+
+	s2 = { { 0,0 },{ 2, 0 } };
+	i = geom2d::segment_intersection( s1, s2, geom2d::OverlapStrategy::ALLOW_OVERLAP );
+	assert( geom::in_range( i.first, 0.75 ) && geom::in_range( i.second, 0.25 ) );
+
+	s2 = { { 0,0 },{ 2, 0 } };
+	i = geom2d::segment_intersection( s2, s1, geom2d::OverlapStrategy::ALLOW_OVERLAP );
+	assert( geom::in_range( i.first, 0.25 ) && geom::in_range( i.second, 0.75 ) );
+
+	//Touching
+	geom2d::LineSegment<double> s1_d( { { -1,0 },{ 1, 0 } } );
+	geom2d::LineSegment<double> s2_d ({ { -2,0 },{ -1, 0 } });
+	i = geom2d::segment_intersection( s1_d, s2_d, geom2d::OverlapStrategy::ALLOW_TOUCHING );
+	assert( geom::in_range( i.first, 0.0 ) && geom::in_range( i.second, 1.0 ) );
+	
+	s2_d = { { -2,0 },{ -1, 0 } };
+	i = geom2d::segment_intersection( s2_d, s1_d, geom2d::OverlapStrategy::ALLOW_TOUCHING );
+	assert( geom::in_range( i.first, 1.0 ) && geom::in_range( i.second, 0.0 ) );
+
+	s2_d = { { -1,0 },{ -2, 0 } };
+	i = geom2d::segment_intersection( s1_d, s2_d, geom2d::OverlapStrategy::ALLOW_TOUCHING );
+	assert( geom::in_range( i.first, 0.0 ) && geom::in_range( i.second, 0.0 ) );
+
+	s2_d = { { 1,0 },{ 24.654, 234.6874 } };
+	i = geom2d::segment_intersection( s1_d, s2_d, geom2d::OverlapStrategy::ALLOW_TOUCHING );
+	assert( geom::in_range( i.first, 1.0 ) && geom::in_range( i.second, 0.0 ) );
+	
+	s2_d = { { 1,0 },{ -24.654, -234.6874 } };
+	i = geom2d::segment_intersection( s1_d, s2_d, geom2d::OverlapStrategy::ALLOW_TOUCHING );
+	assert( geom::in_range( i.first, 1.0 ) && geom::in_range( i.second, 0.0 ) );
+
+	s2_d = { { 0,0 },{ -24.654, -234.6874 } };
+	i = geom2d::segment_intersection( s1_d, s2_d, geom2d::OverlapStrategy::ALLOW_TOUCHING );
+	assert( geom::in_range( i.first, 0.5 ) && geom::in_range( i.second, 0.0 ) );
+
+	s2_d = { { 0,0 },{ 24.654, 234.6874 } };
+	i = geom2d::segment_intersection( s1_d, s2_d, geom2d::OverlapStrategy::ALLOW_TOUCHING );
+	assert( geom::in_range( i.first, 0.5 ) && geom::in_range( i.second, 0.0 ) );
+
+	s2_d = { { -24.654, -234.6874 }, {0.8675423, 0} };
+	i = geom2d::segment_intersection( s1_d, s2_d, geom2d::OverlapStrategy::ALLOW_TOUCHING );
+	assert( geom::in_range( i.first, 1.8675423/2.0, 10 ) && geom::in_range( i.second, 1.0 ) );
+
+	s2_d = { { 1, 1 },{ 0.8675423, 1e-12 } };
+	i = geom2d::segment_intersection( s1_d, s2_d, geom2d::OverlapStrategy::ALLOW_TOUCHING );
+	assert( geom::in_range( i.first, -1.0 ) && geom::in_range( i.second, -1.0 ) );
+}
+
+
+
 int main(){
     std::cout << "Starting *geom::* tests:" << std::endl;
 
@@ -266,6 +411,9 @@ int main(){
     //angles between zero-based vectors
     test_angles();
 
+	//segment intersections
+	test_segment_intersections();
+
     //convex hull
     test_cvhull();
 
@@ -274,6 +422,9 @@ int main(){
 
 	//polygon area
 	test_polygon_area();
+
+	//Rectangles
+	test_rectangles();
 
 	//min encl parallelogram
 	test_encl_parallelogram();
