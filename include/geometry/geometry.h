@@ -936,9 +936,19 @@ geom2d::polygon<double> bonding_box( const geom::point_cloud<T, 2>& points ) {
 
 
 
-//Given two line segments g1 = x1+s*(x2-x1), g2 = y1+t*(y2-y1), (s,t in [0,1]), the function returns the paramaeter pair s_0, t_0 (each in [0,1]) such that x1+s_0*(x2-x1) = y1+t_0*(y2-y1) is the intersection of g1 and g2, or (-1, -1) if they do not intersect.
+//Given two line segments g1 = x1+s*(x2-x1), g2 = y1+t*(y2-y1), (s,t in [0,1]), the function returns the paramaeter pair s_0, t_0 (each in [0,1]) such that x1+s_0*(x2-x1) = y1+t_0*(y2-y1) is the intersection of g1 and g2.
+//Returns (-1, -1) if they do not intersect.
+//Throws an exception if the segments intersect in more than one point, i.e. are parallel and overlap in an interval, unless the overlap strategy is set to ALLOW_OVERLAP.
+//With this strategy, in the case of overlapping segments, the middle of the overlapping segment is considered as the intersection, and the parameters are returned accordingly.
+//If the overlap strategy is set to ALLOW_NO_OVERLAP, only real intersections are allowd, otherwise an exception is thrown. (Real intersection means paramters in (0,1) excluding 0 and 1, so no touching in endpoints.)
+//Examples:
+//segment_intersection( {{0,0}, {2,0}} , {{1,-1}, {1,1}} ) == {0.5, 0.5}
+//segment_intersection( {{0,0}, {2,0}} , {{2,0}, {3,0}} ) == {1.0, 0.0}
+//segment_intersection( {{0,0}, {2,0}} , {{1,0}, {3,0}}, ALLOW_OVERLAP ) == {0.75, 0.25}
+//segment_intersection( {{0,0}, {2,0}} , {{1,0}, {1,1}} ) == {0.5, 0.0}
+//segment_intersection( {{0,0}, {2,0}} , {{1,0}, {1,1}}, ALLOW_NO_OVERLAP ) -> Exception
 template<typename T>
-std::pair<double, double> segment_intersection( const LineSegment<T>& s1, const LineSegment<T>& s2, OverlapStrategy overlap ) {
+std::pair<double, double> segment_intersection( const LineSegment<T>& s1, const LineSegment<T>& s2, OverlapStrategy overlap = OverlapStrategy::ALLOW_TOUCHING ) {
 	//Initialize some necessary vectors
 	Vec2D<T> x_vec = s1.x2 - s1.x1;
 	Vec2D<T> x1y1_vec = s2.x1 - s1.x1;
