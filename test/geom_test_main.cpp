@@ -4,7 +4,10 @@
 // (See accompanying file LICENSE)
 
 
-#include "geometry/geometry.h"
+#include "geometry/geometry.hpp"
+#include "examples/ex1.hpp"
+#include "examples/ex2.hpp"
+#include "examples/ex3.hpp"
 
 #include <iostream>
 
@@ -537,6 +540,12 @@ void test_segment_intersections() {
 }
 
 
+void test_examples() {
+	ex1();
+	ex2();
+	ex3();
+	std::cout << "- example tests successful" << std::endl;
+}
 
 int main(){
     std::cout << "Starting *geom::* tests:" << std::endl;
@@ -564,6 +573,9 @@ int main(){
 
 	//min encl parallelogram
 	test_encl_parallelogram();
+
+	//examples
+	test_examples();
 
     std::cout << "Congrats! All tests succesful." << std::endl;
 
