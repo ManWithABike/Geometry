@@ -1,14 +1,14 @@
 # Geometry
-A small convenience header-only library for linear algebra.
+A small convenience header-only library for linear algebra.  
 
-##Dependencies, Installation, Usage
+## Dependencies, Installation, Usage  
 **Dependencies:** None  
 **Installation:** Download the header file *geometry.h*, include it, and you're ready to go.  
 **Usage:** In namespace *geom::*, the library offers a struct for storing n-dimensional vectors in *R^n* or *Z^n* (i.e. with floating point- or integer coordinates) with several constructors, and overloads their operators.  
 Furthermore, it offers a namespace *geom2d::* with some convenient functions for two-dimensional algebra like *cross product*, *perpendicular* and *normal*, *angle calculation*, and higher level stuff like *segment intersection*, *polygon area* and *convex hull* calcuation.
 
 
-##Examples
+## Examples  
 You can find the example code in this repository in *test/examples/*.  
 To make them run as they are, include the *include* folder of this repository into your */usr/local/include* directory.
 
@@ -72,8 +72,8 @@ int main(){
 ```
 
 
-##Disclaimer
+## Disclaimer  
 The functionality of this library initially grew due to my personal need for it. Several projects, which I did not want to depend on a library as overkill as Boost, rely on this simple collection of linear algebra functions. The API might still change in the future. If you have any suggestions, find errors, miss some functions or want to give general feedback/criticism, I'd love to hear from you. Of course, [contributions](https://github.com/CrikeeIP/Geometry/pulls) are also very welcome.
 
-##License
+## License  
 Distributed under the *MIT Software License* (X11 license). (See accompanying file LICENSE.)
