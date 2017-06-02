@@ -10,7 +10,6 @@ Furthermore, it offers a namespace *geom2d::* with some convenient functions for
 
 ## Examples  
 You can find the example code in this repository in *test/examples/*.  
-To make them run as they are, include the *include* folder of this repository into your */usr/local/include* directory.
 
 **Ex1: Vector initialisation, operators, norm & dist**  
 ```cpp
