@@ -35,12 +35,14 @@ const double e = std::exp( 1.0 );
 //Helper functions
 //////////////////
 
-inline int sign( double x ) {
-	return x == 0.0 ? 0 : (x<0 ? -1 : 1);
+const enum Sign { NEGATIVE = -1, ZERO = 0, POSITIVE = 1 };
+
+inline Sign sign( double x ) {
+	return x == 0.0 ? ZERO : (x<0 ? NEGATIVE : POSITIVE);
 }
 
-inline int sign( int x ) {
-	return x == 0 ? 0 : (x<0 ? -1 : 1);
+inline Sign sign( int x ) {
+	return x == 0 ? ZERO : (x<0 ? NEGATIVE : POSITIVE);
 }
 
 inline bool in_range( double goal, double x, int radius = 1) {
@@ -120,7 +122,8 @@ inline Angle arc_to_angle( double circle_radius, double arc_length ) {
 
 template <typename T, std::size_t N>
 struct Vec {
-	Vec() : coordinates() {}
+	//TODO: Alle MemberFunktionen auslagern?!
+	Vec() : coordinates( {} ) {}
 	Vec( const std::array<T,N>& coords ) : coordinates(coords) {}
 	Vec( const Vec<T, N>& vec ) : coordinates(vec.coordinates) {}
 	Vec( const T& x ) : coordinates() {
@@ -136,16 +139,35 @@ struct Vec {
 	template<std::size_t I = N, typename std::enable_if<I == 4, int>::type = 0 >
 	Vec( T a, T b, T c, T d ) : coordinates( { a, b, c, d } ) {}
 
-	std::size_t dimension() {
-		return coordinates.size;
+	std::size_t dimension() const {
+		return coordinates.size();
 	}
 
-	T operator[] ( std::size_t n ) const {
-		assert( n < coordinates.size() );
+	template< std::size_t n, typename std::enable_if<n<N, int>::type = 0>
+	const T& Get() const {
 		return coordinates[n];
 	}
 
-	template<std::size_t I = N, typename std::enable_if<(I==2||I==3), int>::type = 0 >
+	template< std::size_t n, typename std::enable_if<n<N, int>::type = 0 >
+	T& Get() {
+		return coordinates[n];
+	}
+
+	const T& operator[] ( std::size_t n ) const {
+		if ( n >= coordinates.size() ) {
+			throw (std::out_of_range( "Vector coordinate index out of range" ));
+		}
+		return coordinates[n];
+	}
+
+	T& operator[] ( std::size_t n ) {
+		if ( n >= coordinates.size() ) {
+			throw (std::out_of_range( "Vector coordinate index out of range" ));
+		}
+		return coordinates[n];
+	}
+
+	template<std::size_t I = N, typename std::enable_if<(I==1||I==2||I==3), int>::type = 0 >
 	T x() const {
 		return coordinates[0];
 	}
@@ -160,7 +182,7 @@ struct Vec {
 		return coordinates[2];
 	}
 
-	//TODO: template< std::size_t N, typename U = T, typename std::enable_if< std::is_convertible<U, double>::value >
+	template< typename dummy = std::enable_if< std::is_convertible<T, double>::value >::type >
 	Vec<double, N> as_doubles() const {
 		std::array<double, N> result;
 		for ( std::size_t i = 0; i < coordinates.size(); i++) {
@@ -169,7 +191,7 @@ struct Vec {
 		return{ result };
 	}
 
-	//TODO: template< typename U = T, typename std::enable_if< std::is_convertible<U, int>::value >::type = 0 >
+	template< typename dummy = std::enable_if< std::is_convertible<T, int>::value >::type >
 	Vec<int, N> round() const {
 		std::array<int, N> result;
 		for ( std::size_t i = 0; i < coordinates.size(); i++ ) {
@@ -191,7 +213,7 @@ private:
 };
 
 //make_vec because class template arguments (in their class constructors) cannot be deduced
-template <std::size_t N, typename T, typename... Args>
+template <typename T, typename... Args, std::size_t N = sizeof...(Args) + 1 >
 geom::Vec<T,N> make_vec( T x, Args&&... xs )
 {
 	std::size_t size = 1 + sizeof...( xs );
@@ -272,12 +294,26 @@ Vec<T,N> operator+( const Vec<T,N>& lhs, const Vec<T,N>& rhs ) {
 }
 
 template <typename T, std::size_t N>
+void operator+=( Vec<T, N>& lhs, const Vec<T, N>& rhs ) {
+	for ( std::size_t i = 0; i < N; i++ ) {
+		lhs[i] += rhs[i];
+	}
+}
+
+template <typename T, std::size_t N>
 Vec<T, N> operator-( const Vec<T, N>& lhs, const Vec<T, N>& rhs ) {
 	std::array<T, N> result;
 	for ( std::size_t i = 0; i < N; i++ ) {
 		result[i] = ( lhs[i] - rhs[i] );
 	}
 	return{ result };
+}
+
+template <typename T, std::size_t N>
+void operator-=( Vec<T, N>& lhs, const Vec<T, N>& rhs ) {
+	for ( std::size_t i = 0; i < N; i++ ) {
+		lhs[i] -= rhs[i];
+	}
 }
 
 template <typename T, std::size_t N>
@@ -450,7 +486,7 @@ namespace internal
 
 		if ( x1y1_sign == x1y2_sign  && x1y2_sign == x2y1_sign && x2y1_sign == x2y2_sign ) {
             //no intersection, because y1&y2 on the same side of the normal
-            assert(x1y1_sign != 0); ///sanity check:
+            assert(x1y1_sign != 0); ///sanity check
 			return {-1,-1};
 		}
 
@@ -497,7 +533,6 @@ namespace internal
 		
 		else {
 			throw(std::invalid_argument( "Touching or overlapping parallel line segments, which are not allowed" ));// + "{ " + s1.x1.print() + " ; " + s1.x2.print() + " }   <>   { " + s2.x1.print() + " ; " + s2.x2.print() + " }" ));
-			assert( false ); //Overlapping segments //TODO: Exception?
 		}
 	}
 
@@ -599,7 +634,7 @@ namespace internal
 		const auto l = antipodal_pairs( convex_polygon );
 
 		double s0 = std::numeric_limits<double>::max();
-		geom2d::Vec2D<double> a0, b0, c0, d0;
+		geom2d::Vec2D<double> a0 = { 0,0 }, b0 = { 0,0 }, c0 = { 0,0 }, d0 = { 0,0 };
 		std::size_t z10, z20;
 
 		for ( std::size_t z1 = 0; z1 < n; z1++ ) {
@@ -795,8 +830,7 @@ geom2d::polygon<T> convex_hull(const geom::point_cloud<T,2>& points){ //TODO: en
 
 	//Search max, min of y,x
 	std::vector<Vec2D<T>> relevant_points;
-	Vec2D<T> left, top, right, bottom;
-	left = top = right = bottom = points.front();
+	Vec2D<T> left = points.front(), top = points.front(), right = points.front(), bottom = points.front();
 
 	for( const auto& p : points){
         if(p[0] < left[0]){
@@ -965,7 +999,7 @@ std::pair<double, double> segment_intersection( const LineSegment<T>& s1, const 
 			return internal::segments_on_line_intersection( s1, s2, overlap );
 		}
 		else {
-			//parallel but not on same line -> no intersection
+			//Parallel but not on same line -> no intersection
 			return{ -1.0, -1.0 };
 		}
 	}
@@ -987,6 +1021,9 @@ std::pair<double, double> segment_intersection( const LineSegment<T>& s1, const 
 		return{-1, -1};
 	}
 
+	if ( overlap == OverlapStrategy::ALLOW_NO_OVERLAP ) {
+		throw(std::invalid_argument( "Touching non-parallel line segments, which are not allowed" ));
+	}
 	return{ s_0_x, s_0_y };
 }
 
@@ -1034,19 +1071,15 @@ struct Rectangle {
 
 	//Create a rectangle from two points forming the first edge, and the length of the second edge.
 	//The Flag p1_p2_counterclockwise indicates whether p1 p2 lie counterclockwise along the perimeter of the rectangle. I.e., if the second edge turns left or right when walking along the first edge from p1 to p2.
-	Rectangle( const Vec2D<double>& p1, const Vec2D<double>& p2, double edge2_length, bool p1_p2_counterclockwise ) {
+	Rectangle( const Vec2D<double>& p1, const Vec2D<double>& p2, double edge2_length, bool p1_p2_counterclockwise ) : x1(p1), x2(p2), x3(p2), x4(p2){
 		auto n = geom2d::normal( p2 - p1 );
 		if ( p1_p2_counterclockwise ) {
-			x1 = p1;
-			x2 = p2;
-			x3 = p2 + (n* edge2_length);
+			x3 += (n* edge2_length);
 			x4 = p1 + (n * edge2_length);
 		}
 		else {
-			x1 = p1;
 			x2 = p1 - (n * edge2_length);
-			x3 = p2 - (n * edge2_length);
-			x4 = p2;
+			x3 -= (n * edge2_length);
 		}
 
 		const auto side_center = x1 + (x2 - x1) / 2.0;

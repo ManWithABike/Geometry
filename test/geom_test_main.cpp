@@ -12,20 +12,56 @@
 typedef geom2d::Vec2D<double> Vec2;
 typedef geom2d::Vec2D<int> Vec2i;
 typedef geom::Vec<double, 3> Vec3;
+typedef geom::Vec<int, 3> Vec3i;
 
 
 void test_basic_funcionality(){
 	//Vector initialization
 	const auto const_vec = geom::Vec<int,4>( 5 );
 	assert( const_vec[3] == 5 );
+	const_vec.dimension();
+	assert( const_vec.dimension() == 4 );
 	
 	const auto xyz = geom::Vec<unsigned char, 3>( { 1,2,3 } );
 	assert( xyz.x() == 1);
 	assert( xyz.y() == 2 );
 	assert( xyz.z() == 3 );
+	assert( xyz.dimension() == 3 );
 
 	const auto xy = geom::Vec<unsigned char, 2>( 1,2 );
-	
+	assert( xy.dimension() == 2 );
+	assert( xy.x() == 1 );
+	assert( xy.y() == 2 );
+
+	//default constructed
+	geom::Vec<int, 1> mv_1i;
+	assert( mv_1i.dimension() == 1 );
+	assert( (mv_1i == geom::Vec<int, 1>( 0 )) );
+	geom::Vec<double, 6> mv_6d;
+	assert( mv_6d.dimension() == 6 );
+	assert( (mv_6d == geom::Vec<double, 6>( 0.0 )) );
+	geom::Vec<char, 6> mv_6char;
+	assert( (mv_6char == geom::Vec<char, 6>( 0 )) );
+	geom::Vec<std::string, 6> mv_6str;
+	assert( (mv_6str == geom::Vec<std::string, 6>( "" )) );
+
+	//make_vec
+	auto mv_3d = geom::make_vec( 1.2, 2.5, 3.9 );
+	auto mv_4i = geom::make_vec( 1, 2, 3, 4 );
+	auto mv_1f = geom::make_vec( -1.6f );
+
+	//round
+	auto mv_1 = mv_1f.round();
+	assert( (mv_1 == geom::Vec<int,1>(-2)) );
+	auto mv_3 = mv_3d.round();
+	assert( (mv_3 == geom::Vec<int, 3>(1, 3, 4)) );
+
+	//Set coordinates
+	mv_3d[2] = 2.14;
+	assert( mv_3d[2] == 2.14 );
+	assert(mv_3d.Get<2>() == 2.14);
+	const auto mv_3d_const = mv_3d;
+	assert( mv_3d_const.Get<2>() == 2.14 );
 
 	//Compute Pythagoras & Operators
 	Vec3 vec3d_1{ { 0,1,2 } };
@@ -60,11 +96,16 @@ void test_basic_funcionality(){
 	norm = geom::norm( geom::normalize( cv1.as_doubles() ) );
 	assert( geom::in_range( norm, 1.0 ) );
 	
+	//Crossproduct
+	assert( geom2d::cross<double>( { 0,1 }, { 1,0 } ) == geom::Sign::NEGATIVE );
+	assert( geom2d::cross<double>( { 1,0 }, { 0,1 } ) == geom::Sign::POSITIVE );
+	assert( geom2d::cross<double>( { 1e-16,0 }, { 0,1e-16 } ) > 0.0 );
+	assert( geom2d::cross<double>( { 1,0 }, { 2,0 } ) == geom::Sign::ZERO );
+
 	//Dist
 	vec3d_1 = { { 4,-1,-7 } };
 	vec3d_2 = { { 3,-3,5 } };
 	assert( geom::in_range( geom::square_dist( vec3d_1, vec3d_2 ), 1.0 * 1.0 + 2.0 * 2.0 + 12.0 * 12.0 ) );
-
 
 	//Centroid
 	std::vector<Vec2i> points( { { 0,0 },{ 1,0 },{ 1,1 },{ 0,1 } } );
@@ -290,8 +331,12 @@ void test_encl_parallelogram() {
 }
 
 void test_segment_intersections() {
+	geom2d::LineSegment<double> s1_d( { { -1,0 },{ 1, 0 } } );
+	geom2d::LineSegment<double> s2_d( { { -1,0 },{ 1, 0 } } );
+
 	geom2d::LineSegment<int> s1( { {-1,0},{1,0} } );
 	geom2d::LineSegment<int> s2( { { -1,1 },{ 1,1 } } );
+
 	auto i = geom2d::segment_intersection( s1, s2, geom2d::OverlapStrategy::ALLOW_OVERLAP );
 	assert( geom::in_range( i.first, -1.0 ) && geom::in_range( i.second, -1.0 ) );
 
@@ -335,6 +380,11 @@ void test_segment_intersections() {
 	s2 = { { 2,0 },{ -2, 0 } };
 	i = geom2d::segment_intersection( s1, s2, geom2d::OverlapStrategy::ALLOW_OVERLAP );
 	assert( geom::in_range( i.first, 0.5 ) && geom::in_range( i.second, 0.5 ) );
+	
+	//s2 in s1
+	s2_d = { { 0.75,0 },{ -0.25, 0 } };
+	i = geom2d::segment_intersection( s1_d, s2_d, geom2d::OverlapStrategy::ALLOW_OVERLAP );
+	assert( geom::in_range( i.first, 5.0/8.0 ) && geom::in_range( i.second, 0.5 ) );
 
 	//overlapping
 	s2 = { { -2,0 },{ 0, 0 } };
@@ -362,42 +412,126 @@ void test_segment_intersections() {
 	assert( geom::in_range( i.first, 0.25 ) && geom::in_range( i.second, 0.75 ) );
 
 	//Touching
-	geom2d::LineSegment<double> s1_d( { { -1,0 },{ 1, 0 } } );
-	geom2d::LineSegment<double> s2_d ({ { -2,0 },{ -1, 0 } });
-	i = geom2d::segment_intersection( s1_d, s2_d, geom2d::OverlapStrategy::ALLOW_NO_OVERLAP );
+	s2_d = { { -2,0 },{ -1, 0 } };
+	i = geom2d::segment_intersection( s1_d, s2_d, geom2d::OverlapStrategy::ALLOW_TOUCHING );
 	assert( geom::in_range( i.first, 0.0 ) && geom::in_range( i.second, 1.0 ) );
 	
 	s2_d = { { -2,0 },{ -1, 0 } };
-	i = geom2d::segment_intersection( s2_d, s1_d, geom2d::OverlapStrategy::ALLOW_NO_OVERLAP );
+	i = geom2d::segment_intersection( s2_d, s1_d, geom2d::OverlapStrategy::ALLOW_TOUCHING );
 	assert( geom::in_range( i.first, 1.0 ) && geom::in_range( i.second, 0.0 ) );
 
 	s2_d = { { -1,0 },{ -2, 0 } };
-	i = geom2d::segment_intersection( s1_d, s2_d, geom2d::OverlapStrategy::ALLOW_NO_OVERLAP );
+	i = geom2d::segment_intersection( s1_d, s2_d, geom2d::OverlapStrategy::ALLOW_TOUCHING );
 	assert( geom::in_range( i.first, 0.0 ) && geom::in_range( i.second, 0.0 ) );
 
 	s2_d = { { 1,0 },{ 24.654, 234.6874 } };
-	i = geom2d::segment_intersection( s1_d, s2_d, geom2d::OverlapStrategy::ALLOW_NO_OVERLAP );
+	i = geom2d::segment_intersection( s1_d, s2_d, geom2d::OverlapStrategy::ALLOW_TOUCHING );
 	assert( geom::in_range( i.first, 1.0 ) && geom::in_range( i.second, 0.0 ) );
 	
 	s2_d = { { 1,0 },{ -24.654, -234.6874 } };
-	i = geom2d::segment_intersection( s1_d, s2_d, geom2d::OverlapStrategy::ALLOW_NO_OVERLAP );
+	i = geom2d::segment_intersection( s1_d, s2_d, geom2d::OverlapStrategy::ALLOW_TOUCHING );
 	assert( geom::in_range( i.first, 1.0 ) && geom::in_range( i.second, 0.0 ) );
 
 	s2_d = { { 0,0 },{ -24.654, -234.6874 } };
-	i = geom2d::segment_intersection( s1_d, s2_d, geom2d::OverlapStrategy::ALLOW_NO_OVERLAP );
+	i = geom2d::segment_intersection( s1_d, s2_d, geom2d::OverlapStrategy::ALLOW_TOUCHING );
 	assert( geom::in_range( i.first, 0.5 ) && geom::in_range( i.second, 0.0 ) );
 
 	s2_d = { { 0,0 },{ 24.654, 234.6874 } };
-	i = geom2d::segment_intersection( s1_d, s2_d, geom2d::OverlapStrategy::ALLOW_NO_OVERLAP );
+	i = geom2d::segment_intersection( s1_d, s2_d, geom2d::OverlapStrategy::ALLOW_TOUCHING );
 	assert( geom::in_range( i.first, 0.5 ) && geom::in_range( i.second, 0.0 ) );
 
 	s2_d = { { -24.654, -234.6874 }, {0.8675423, 0} };
-	i = geom2d::segment_intersection( s1_d, s2_d, geom2d::OverlapStrategy::ALLOW_NO_OVERLAP );
+	i = geom2d::segment_intersection( s1_d, s2_d, geom2d::OverlapStrategy::ALLOW_TOUCHING );
 	assert( geom::in_range( i.first, 1.8675423/2.0, 10 ) && geom::in_range( i.second, 1.0 ) );
 
 	s2_d = { { 1, 1 },{ 0.8675423, 1e-12 } };
-	i = geom2d::segment_intersection( s1_d, s2_d, geom2d::OverlapStrategy::ALLOW_NO_OVERLAP );
+	i = geom2d::segment_intersection( s1_d, s2_d, geom2d::OverlapStrategy::ALLOW_TOUCHING );
 	assert( geom::in_range( i.first, -1.0 ) && geom::in_range( i.second, -1.0 ) );
+
+	s2_d = { { -2, 0 },{ 0, 1e-20 } };
+	i = geom2d::segment_intersection( s1_d, s2_d, geom2d::OverlapStrategy::ALLOW_TOUCHING );
+	assert( geom::in_range( i.first, -1.0 ) && geom::in_range( i.second, -1.0 ) );
+
+	s2_d = { { 0.5, 0 },{ 1, 1 } };
+	i = geom2d::segment_intersection( s1_d, s2_d, geom2d::OverlapStrategy::ALLOW_TOUCHING );
+	assert( geom::in_range( i.first, 0.75 ) && geom::in_range( i.second, 0.0 ) );
+
+	s2_d = { { 1,1 },{ 0.5, 0 } };
+	i = geom2d::segment_intersection( s1_d, s2_d, geom2d::OverlapStrategy::ALLOW_TOUCHING );
+	assert( geom::in_range( i.first, 0.75 ) && geom::in_range( i.second, 1.0 ) );
+
+	//Error cases
+	s2_d = { { -2, 0 },{ -1.0 + 1e-16, 0 } };
+	bool caught = false;
+	i = { -2,-2 };
+	try {
+		i = geom2d::segment_intersection( s1_d, s2_d, geom2d::OverlapStrategy::ALLOW_TOUCHING ); //Overlapping but only touching allowed
+	}
+	catch ( std::exception ex ) {
+		caught = true;
+	}
+	assert( caught );
+	assert( i == std::make_pair( -2.0, -2.0 ) );
+
+	s2_d = { { 1.0 - 1e16, 0 },{ 2, 0 } };
+	caught = false;
+	i = { -2,-2 };
+	try {
+		i = geom2d::segment_intersection( s1_d, s2_d, geom2d::OverlapStrategy::ALLOW_TOUCHING ); //Overlapping but only touching allowed
+	}
+	catch ( std::exception ex ) {
+		caught = true;
+	}
+	assert( caught );
+	assert( i == std::make_pair( -2.0, -2.0 ) );
+
+	s2_d = { { -2, 0 },{ -1.0, 0 } };
+	caught = false;
+	i = {-2,-2};
+	try {
+		i = geom2d::segment_intersection( s1_d, s2_d, geom2d::OverlapStrategy::ALLOW_NO_OVERLAP ); //Touching though not allowed
+	}
+	catch ( std::exception ex ) {
+		caught = true;
+	}
+	assert( caught );
+	assert( i == std::make_pair(-2.0, -2.0) );
+
+	s2_d = { { -1, 2 },{ -1, 0 } };
+	caught = false;
+	i = { -2,-2 };
+	try {
+		i = geom2d::segment_intersection( s1_d, s2_d, geom2d::OverlapStrategy::ALLOW_NO_OVERLAP ); //Touching though not allowed
+	}
+	catch ( std::exception ex ) {
+		caught = true;
+	}
+	assert( caught );
+	assert( i == std::make_pair( -2.0, -2.0 ) );
+
+	s2_d = { { 0.5, 0 },{ 1, 1 } };
+	caught = false;
+	i = { -2,-2 };
+	try {
+		i = geom2d::segment_intersection( s1_d, s2_d, geom2d::OverlapStrategy::ALLOW_NO_OVERLAP ); //Touching though not allowed
+	}
+	catch ( std::exception ex ) {
+		caught = true;
+	}
+	assert( caught );
+	assert( i == std::make_pair( -2.0, -2.0 ) );
+
+	s2_d = { { -1, -1 },{ 0.5, 0 } };
+	caught = false;
+	i = { -2,-2 };
+	try {
+		i = geom2d::segment_intersection( s1_d, s2_d, geom2d::OverlapStrategy::ALLOW_NO_OVERLAP ); //Touching though not allowed
+	}
+	catch ( std::exception ex ) {
+		caught = true;
+	}
+	assert( caught );
+	assert( i == std::make_pair( -2.0, -2.0 ) );
 
 	std::cout << "- segment intersection tests successful" << std::endl;
 }
