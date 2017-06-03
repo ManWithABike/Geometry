@@ -35,7 +35,7 @@ const double e = std::exp( 1.0 );
 //Helper functions
 //////////////////
 
-const enum Sign { NEGATIVE = -1, ZERO = 0, POSITIVE = 1 };
+enum Sign { NEGATIVE = -1, ZERO = 0, POSITIVE = 1 };
 
 inline Sign sign( double x ) {
 	return x == 0.0 ? ZERO : (x<0 ? NEGATIVE : POSITIVE);
@@ -67,7 +67,7 @@ inline bool in_range( int goal, int x ) {
 //Angle struct
 //////////////
 
-const enum struct AngleType { RAD = 0, DEG = 1 };
+enum AngleType { RAD = 0, DEG = 1 };
 
 inline double rad_to_deg( double rad ) {
 	return rad * 180 / pi;
@@ -129,7 +129,7 @@ struct Vec {
 	Vec( const T& x ) : coordinates() {
 		coordinates.fill( x );
 	}
-	
+
 	template<std::size_t I = N, typename std::enable_if<I == 2, int>::type = 0 >
 	Vec( T a, T b ) : coordinates( { a, b } ) {}
 
@@ -171,7 +171,7 @@ struct Vec {
 	T x() const {
 		return coordinates[0];
 	}
-	
+
 	template< std::size_t I = N, typename std::enable_if<I==2||I==3, int>::type = 0 >
 	T y() const {
 		return coordinates[1];
@@ -182,7 +182,9 @@ struct Vec {
 		return coordinates[2];
 	}
 
-	template< typename dummy = std::enable_if< std::is_convertible<T, double>::value >::type >
+	template< typename S = T,
+              typename = typename std::enable_if< std::is_convertible<S, double>::value >::type
+            >
 	Vec<double, N> as_doubles() const {
 		std::array<double, N> result;
 		for ( std::size_t i = 0; i < coordinates.size(); i++) {
@@ -191,7 +193,9 @@ struct Vec {
 		return{ result };
 	}
 
-	template< typename dummy = std::enable_if< std::is_convertible<T, int>::value >::type >
+	template< typename S = T,
+              typename = typename std::enable_if< std::is_convertible<S, int>::value, int >::type
+            >
 	Vec<int, N> round() const {
 		std::array<int, N> result;
 		for ( std::size_t i = 0; i < coordinates.size(); i++ ) {
@@ -468,14 +472,81 @@ using polygon = std::vector<Vec2D<T>>;
 
 
 
-///////////
-//Internals
-///////////
-namespace internal
-{
-	
 
-	//Determines, whether or not a horizontal ray from x to the right intersects the segment s
+///////////////////
+//Vector Arithmetic
+///////////////////
+
+//Computes the vector rotated 90 deg counter-clockwise (preserves length)
+template<typename T>
+Vec2D<T> perpendicular( const Vec2D<T>& vec ) {
+	return{ -vec[1], vec[0] };
+}
+
+//Computes the vector rotated 90 deg counter-clockwise and normalizes it to length 1
+inline Vec2D<double> normal( const Vec2D<double>& vec ) {
+	return normalize( perpendicular( vec ) );
+}
+
+/**Computes the small angle (in [0,180]) enclosed by the two vectors.
+* E.g.
+anlge( {1,0}, {10,0} ) == 0.0
+anlge( {1,0}, {1,1} ) == 45.0
+anlge( {1,0}, {-1,-1} ) == 135.0
+anlge( {1,0}, {-2,0} ) == 180.0
+
+anlge( {1,0}, {0,-1} ) == 90
+anlge( {1,0}, {-2,-1} ) == 153.435
+*/
+template<typename T>
+geom::Angle enclosed_angle( Vec2D<T> vec1, Vec2D<T> vec2 ) {
+	double prod = vec1 * vec2;
+	double norm1 = norm( vec1 );
+	double norm2 = norm( vec2 );
+	double arg = prod / (norm1 * norm2);
+	double angle = std::acos( arg );
+	return geom::Angle(angle, geom::AngleType::RAD);
+}
+
+/**Computes the angle (in (-180,180]) between two vectors, measured counter-clockwise from the first vector ("vec1").
+* E.g.
+anlge( {1,0}, {10,0} ) == +0.0
+anlge( {1,0}, {1,1} ) == +45.0
+anlge( {1,0}, {-2,0} ) == +180.0
+anlge( {1,0}, {0,-1} ) == -90
+anlge( {1,0}, {-1,-1} ) == -135.0
+anlge( {1,0}, {-2,-1} ) == -153.435
+*/
+template<typename T>
+geom::Angle angle( const Vec2D<T>& vec1, const Vec2D<T>& vec2 ) {
+	geom::Angle angle = enclosed_angle( vec1, vec2 );
+	double side = cross( vec1, vec2 );
+	return (side >= 0.0) ? angle : geom::Angle( -angle.deg(), geom::AngleType::DEG );
+}
+
+/**Computes the angle (in [0,360]) between two vectors, measured counter-clockwise from the first vector ("vec1").
+* E.g.
+anlge( {1,0}, {10,0} ) == 0.0
+anlge( {1,0}, {1,1} ) == 45.0
+anlge( {1,0}, {-2,0} ) == 180.0
+anlge( {1,0}, {-1,-1} ) == 225.0
+anlge( {1,0}, {-2,-1} ) == 206.565
+anlge( {1,0}, {0,-1} ) == 270
+*/
+template<typename T>
+geom::Angle positive_angle( const Vec2D<T>& vec1, const Vec2D<T>& vec2 ) {
+	geom::Angle angle = geom2d::angle( vec1, vec2 );
+	return (angle.deg() >= 0.0) ? angle : geom::Angle(360.0 + angle.deg(), geom::AngleType::DEG);
+}
+
+
+
+///////////////////////
+//Advanced Vector Stuff
+///////////////////////
+
+namespace internal{
+//Determines, whether or not a horizontal ray from x to the right intersects the segment s
 	template<typename T>
 	bool ray_intersects_segment(const Vec2D<T>& x, const LineSegment<T>& s){
 	return (
@@ -483,74 +554,186 @@ namespace internal
 			( x[0] < s.x1[0] + ((s.x2[0]-s.x1[0]) / (s.x2[1]-s.x1[1])) * (x[1]-s.x1[1]) ) ///x is left of segment
 		);
 	}
+}
 
-	template<typename T>
-	std::pair<double, double> segments_on_line_intersection( const LineSegment<T>& s1, const LineSegment<T>& s2, OverlapStrategy strategy ) {
-		Vec2D<T> x_vec = s1.x2 - s1.x1;
-		Vec2D<T> x1y1_vec = s2.x1 - s1.x1;
-		Vec2D<T> x1y2_vec = s2.x2 - s1.x1;
-		Vec2D<T> x2y1_vec = s2.x1 - s1.x2;
-		Vec2D<T> x2y2_vec = s2.x2 - s1.x2;
-		Vec2D<double> x_normal = normal( x_vec.as_doubles() );
+//Decides whether a point is inside a tiangle using barycentric coordinates
+template<typename T>
+bool point_in_triangle( const Vec2D<T>& A, const Vec2D<T>& B, const Vec2D<T>& C, const Vec2D<T>& x, bool on_line_is_inside = false){
+	// Compute vectors
+	auto v0 = C - A;
+	auto v1 = B - A;
+	auto v2 = x - A;
 
-		int x1y1_sign = geom::sign( cross( x_normal, x1y1_vec.as_doubles() ) );
-		int x1y2_sign = geom::sign( cross( x_normal, x1y2_vec.as_doubles() ) );
-		int x2y1_sign = geom::sign( cross( x_normal, x2y1_vec.as_doubles() ) );
-		int x2y2_sign = geom::sign( cross( x_normal, x2y2_vec.as_doubles() ) );
-
-		if ( x1y1_sign == x1y2_sign  && x1y2_sign == x2y1_sign && x2y1_sign == x2y2_sign ) {
-            //no intersection, because y1&y2 on the same side of the normal
-            assert(x1y1_sign != 0); ///sanity check
-			return {-1,-1};
+	//handle degenerate triangles
+	if ( cross(v1, v0 ) == 0 ) {
+		if ( !on_line_is_inside ) {
+			return false;
 		}
-
-		std::vector<int> signs( { x1y1_sign, x1y2_sign, x2y1_sign, x2y2_sign } );
-		int neg = 0; int zeros = 0; int pos = 0;
-		for ( const auto& sign : signs ) {
-			if ( sign == 0 ) {zeros++;}
-			else if ( sign < 0 ) {neg++;}
-			else {pos++;}
+		Vec2D<T> s1( A );
+		Vec2D<T> s2( (square_dist( A, B )<square_dist( A, C )) ? C : B );
+		if ( s1 == s2 ) {
+			return x == s1;
 		}
-		assert( neg + pos + zeros == 4 ); ///sanity check
+		double t_x = (x[0] - s1[0]) / (s2[0] - s1[0]);
+		double t_y = (x[1] - s1[1]) / (s2[1] - s1[1]);
+		return t_x >= 0.0 && t_x <= 1.0 && geom::in_range( t_x, t_y );
+	}
 
-		if ( zeros == 1 && (neg == 0 || pos == 0) && strategy >= OverlapStrategy::ALLOW_TOUCHING ) {
-			if ( x1y1_sign == 0 ) { return{ 0,0 }; }
-			if ( x1y2_sign == 0 ) { return{ 0,1 }; }
-			if ( x2y1_sign == 0 ) { return{ 1,0 }; }
-			if ( x2y2_sign == 0 ) { return{ 1,1 }; }
-			
-			throw(std::invalid_argument( "Overlapping line segments, which are not allowed" ));// +"{ " + s1.x1.print() + " ; " + s1.x2.print() + " }   <>   { " + s2.x1.print() + " ; " + s2.x2.print() + " }" ) );
+	// Compute dot products
+	auto dot00 = v0 * v0;
+	auto dot01 = v0 * v1;
+	auto dot02 = v0 * v2;
+	auto dot11 = v1 * v1;
+	auto dot12 = v1 * v2;
+
+	// Compute barycentric coordinates
+	double invDenom = 1.0 / static_cast<double>(dot00 * dot11 - dot01 * dot01);
+	double u = (dot11 * dot02 - dot01 * dot12) * invDenom;
+	double v = (dot00 * dot12 - dot01 * dot02) * invDenom;
+
+	// Check if point is in triangle
+	if ( on_line_is_inside ){
+		return (u >= 0) && (v >= 0) && (u + v <= 1);
+	}
+	else{
+		return (u > 0) && (v > 0) && (u + v < 1);
+	}
+}
+
+//Decides whether a point is inside a polygon
+template<typename T>
+bool point_in_polygon( const Vec2D<T>& x, const polygon<T>& p){
+	//Check bounding box if p is reasonably large to justify another loop through it
+	if(p.size() > 10){
+		double x_min = p[0][0], x_max = x_min, y_max = p[0][1], y_min = y_max;
+		for( const auto& p_i : p){
+			if(p_i[0] > x_max){ x_max = p_i[0]; }
+			else if(p_i[0] < x_min){ x_min = p_i[0]; }
+			if(p_i[1] > y_max){ y_max = p_i[1]; }
+			else if(p_i[1] < y_min){ y_min = p_i[1]; }
 		}
-
-		else if( strategy == OverlapStrategy::ALLOW_OVERLAP){
-			//Return parameters of the middle of the overlapping segment
-
-			//case 1: s2 completely in s1
-			if ( (x1y1_sign >= 0 && x1y2_sign >= 0 && x2y1_sign <= 0 && x2y2_sign <= 0) 
-				 || (x1y1_sign <= 0 && x1y2_sign <= 0 && x2y1_sign >= 0 && x2y2_sign >= 0) ) {
-				auto s2_middle = s2.x1.as_doubles() + (s2.x2-s2.x1).as_doubles()/2.0;
-				return{ geom::dist(s2_middle, s1.x1.as_doubles()) / geom::norm(x_vec), 0.5 };
-			}
-			//case 2: s1 completely in s2
-			if ( (x1y1_sign <= 0 && x1y2_sign >= 0 && x2y1_sign <= 0 && x2y2_sign >= 0)
-				 || (x1y1_sign >= 0 && x1y2_sign <= 0 && x2y1_sign >= 0 && x2y2_sign <= 0) ) {
-				auto s1_middle = s1.x1.as_doubles() + (s1.x2 - s1.x1).as_doubles()/2.0;
-				return{ 0.5, geom::dist( s1_middle, s2.x1.as_doubles() ) / geom::dist( s2.x1, s2.x2 ) };
-			}
-			//case 3: 
-			auto p1 = (x1y1_sign == x1y2_sign) ? s1.x2 : s1.x1;
-			auto p2 = (x1y1_sign == x2y1_sign) ? s2.x2 : s2.x1;
-			auto overlap_middle = p1.as_doubles() + (p2 - p1).as_doubles() / 2.0;
-			return {geom::dist( overlap_middle, s1.x1.as_doubles() ) / geom::dist( s1.x1, s1.x2 ),
-					geom::dist( overlap_middle, s2.x1.as_doubles() ) / geom::dist( s2.x1, s2.x2 )};
-		}
-		
-		else {
-			throw(std::invalid_argument( "Touching or overlapping parallel line segments, which are not allowed" ));// + "{ " + s1.x1.print() + " ; " + s1.x2.print() + " }   <>   { " + s2.x1.print() + " ; " + s2.x2.print() + " }" ));
+		if(x[0] < x_min || x[0] > x_max || x[1] < y_min || x[1 > y_min]){
+			return false;
 		}
 	}
 
-	//Computes the parallelogram with minimal area enclosing all points given
+	//If point is within bounding box, calculate edge crossings with a horizontal ray from x to the right
+	bool inside = false;
+	for ( std::size_t i=0, j=p.size()-1; i<p.size(); j=i++ ) {
+		LineSegment<T> s ( {p[i], p[j]} );
+		if ( internal::ray_intersects_segment( x, s ) ){
+            inside = !inside;
+        }
+	}
+	return inside;
+}
+
+//Calculates the convex hull of the given set of points
+template<typename T>
+geom2d::polygon<T> convex_hull(const geom::point_cloud<T,2>& points){ //TODO: enable any stl container
+	//Simple cases
+	if ( points.size() < 3 ) {
+		return points;
+	}
+
+	//Search max, min of y,x
+	std::vector<Vec2D<T>> relevant_points;
+	Vec2D<T> left = points.front(), top = points.front(), right = points.front(), bottom = points.front();
+
+	for( const auto& p : points){
+        if(p[0] < left[0]){
+            left = p;
+        }
+        if(p[0] > right[0]){
+            right = p;
+        }
+        if(p[1] < bottom[1]){
+            bottom = p;
+        }
+        if(p[1] > top[1]){
+            top = p;
+        }
+	}
+
+	//Exclude degenerate case to avoid divisions by 0
+	if(geom::in_range(left[0], right[0])){
+		return {bottom, top};
+	}
+	if(geom::in_range(top[1], bottom[1])){
+		return {left, right};
+	}
+
+	//Sort points into upper/lower half and delete irrelevant ones
+	std::vector<Vec2D<T>> relevant_points_upper;
+	std::vector<Vec2D<T>> relevant_points_lower( { left } );
+	double m = (right[1]-left[1]) / (right[0]-left[0]); ///y per x of middle line
+
+	for(const auto& p : points){
+		double y_cut = left[1] + m * (p[0] - left[0]);
+		if( p[1] > y_cut ) ///p above  middle line? The points left and right do not fulfill this, they are part of the lower hull
+		{
+			if( !point_in_triangle<T>(left, top, right, p)){
+				relevant_points_upper.push_back(p);
+			}
+		}
+		else if( p[1] < y_cut ){
+			if ( !point_in_triangle<T>( left, bottom, right, p ) ) {
+				relevant_points_lower.push_back( p );
+			}
+		}
+	}
+	relevant_points_lower.push_back( right );
+
+	//Sort relevant points by x-coordinate
+    std::sort(std::begin(relevant_points_upper), std::end(relevant_points_upper),
+                [](const Vec2D<T>& p1, const Vec2D<T>& p2) -> bool{
+                    return (p1[0] == p2[0]) ? (p1[1] < p2[1]) : (p1[0] < p2[0]);
+                }
+	);
+
+    std::sort(std::begin(relevant_points_lower), std::end(relevant_points_lower),
+                [](const Vec2D<T>& p1, const Vec2D<T>& p2) -> bool{
+                    return (p1[0] == p2[0]) ? (p1[1] > p2[1]) : (p1[0] > p2[0]);
+                }
+	);
+
+	//Compute the convex hull
+	std::vector<Vec2D<T>> hull;
+	hull.reserve( relevant_points_upper.size()+relevant_points_lower.size() );
+
+	//lower
+	for(const auto& p : relevant_points_lower){
+		while(hull.size() >= 2 ){
+			auto p0 = hull[hull.size()-2];
+			auto p1 = hull[hull.size()-1];
+			if( cross( p1-p0, p-p0 ) > 0.0 ){
+				hull.pop_back();
+			}
+			else{ break; }
+		}
+		hull.push_back(p);
+	}
+
+	//upper
+	std::size_t n_lower = hull.size();
+	for(const auto& p : relevant_points_upper){
+		while(hull.size() >= n_lower +2){
+			auto p0 = hull[hull.size()-2];
+			auto p1 = hull[hull.size()-1];
+			if( cross( p1-p0, p-p0 ) > 0.0 ){
+				hull.pop_back();
+			}
+			else{ break; }
+		}
+		hull.push_back(p);
+	}
+
+	return hull;
+}
+
+
+namespace internal{
+    //Computes the parallelogram with minimal area enclosing all points given
 	template<typename T>
 	geom2d::polygon<double> calc_min_encl_parallelogram( const geom::point_cloud<T,2>& points ) {
 		auto hull = geom2d::convex_hull( points );
@@ -689,254 +872,6 @@ namespace internal
 }//namespace internal
 
 
-
-///////////////////
-//Vector Arithmetic
-///////////////////
-
-//Computes the vector rotated 90 deg counter-clockwise (preserves length)
-template<typename T>
-Vec2D<T> perpendicular( const Vec2D<T>& vec ) {
-	return{ -vec[1], vec[0] };
-}
-
-//Computes the vector rotated 90 deg counter-clockwise and normalizes it to length 1
-inline Vec2D<double> normal( const Vec2D<double>& vec ) {
-	return normalize( perpendicular( vec ) );
-}
-
-/**Computes the small angle (in [0,180]) enclosed by the two vectors.
-* E.g.
-anlge( {1,0}, {10,0} ) == 0.0
-anlge( {1,0}, {1,1} ) == 45.0
-anlge( {1,0}, {-1,-1} ) == 135.0
-anlge( {1,0}, {-2,0} ) == 180.0
-
-anlge( {1,0}, {0,-1} ) == 90
-anlge( {1,0}, {-2,-1} ) == 153.435
-*/
-template<typename T>
-geom::Angle enclosed_angle( Vec2D<T> vec1, Vec2D<T> vec2 ) {
-	double prod = vec1 * vec2;
-	double norm1 = norm( vec1 );
-	double norm2 = norm( vec2 );
-	double arg = prod / (norm1 * norm2);
-	double angle = std::acos( arg );
-	return geom::Angle(angle, geom::AngleType::RAD);
-}
-
-/**Computes the angle (in (-180,180]) between two vectors, measured counter-clockwise from the first vector ("vec1").
-* E.g.
-anlge( {1,0}, {10,0} ) == +0.0
-anlge( {1,0}, {1,1} ) == +45.0
-anlge( {1,0}, {-2,0} ) == +180.0
-anlge( {1,0}, {0,-1} ) == -90
-anlge( {1,0}, {-1,-1} ) == -135.0
-anlge( {1,0}, {-2,-1} ) == -153.435
-*/
-template<typename T>
-geom::Angle angle( const Vec2D<T>& vec1, const Vec2D<T>& vec2 ) {
-	geom::Angle angle = enclosed_angle( vec1, vec2 );
-	double side = cross( vec1, vec2 );
-	return (side >= 0.0) ? angle : geom::Angle( -angle.deg(), geom::AngleType::DEG );
-}
-
-/**Computes the angle (in [0,360]) between two vectors, measured counter-clockwise from the first vector ("vec1").
-* E.g.
-anlge( {1,0}, {10,0} ) == 0.0
-anlge( {1,0}, {1,1} ) == 45.0
-anlge( {1,0}, {-2,0} ) == 180.0
-anlge( {1,0}, {-1,-1} ) == 225.0
-anlge( {1,0}, {-2,-1} ) == 206.565
-anlge( {1,0}, {0,-1} ) == 270
-*/
-template<typename T>
-geom::Angle positive_angle( const Vec2D<T>& vec1, const Vec2D<T>& vec2 ) {
-	geom::Angle angle = geom2d::angle( vec1, vec2 );
-	return (angle.deg() >= 0.0) ? angle : geom::Angle(360.0 + angle.deg(), geom::AngleType::DEG);
-}
-
-
-
-///////////////////////
-//Advanced Vector Stuff
-///////////////////////
-
-//Decides whether a point is inside a tiangle using barycentric coordinates
-template<typename T>
-bool point_in_triangle( const Vec2D<T>& A, const Vec2D<T>& B, const Vec2D<T>& C, const Vec2D<T>& x, bool on_line_is_inside = false){
-	// Compute vectors
-	auto v0 = C - A;
-	auto v1 = B - A;
-	auto v2 = x - A;
-
-	//handle degenerate triangles
-	if ( cross(v1, v0 ) == 0 ) {
-		if ( !on_line_is_inside ) {
-			return false;
-		}
-		Vec2D<T> s1( A );
-		Vec2D<T> s2( (square_dist( A, B )<square_dist( A, C )) ? C : B );
-		if ( s1 == s2 ) {
-			return x == s1;
-		}
-		double t_x = (x[0] - s1[0]) / (s2[0] - s1[0]);
-		double t_y = (x[1] - s1[1]) / (s2[1] - s1[1]);
-		return t_x >= 0.0 && t_x <= 1.0 && geom::in_range( t_x, t_y );
-	}
-
-	// Compute dot products
-	auto dot00 = v0 * v0;
-	auto dot01 = v0 * v1;
-	auto dot02 = v0 * v2;
-	auto dot11 = v1 * v1;
-	auto dot12 = v1 * v2;
-
-	// Compute barycentric coordinates
-	double invDenom = 1.0 / static_cast<double>(dot00 * dot11 - dot01 * dot01);
-	double u = (dot11 * dot02 - dot01 * dot12) * invDenom;
-	double v = (dot00 * dot12 - dot01 * dot02) * invDenom;
-
-	// Check if point is in triangle
-	if ( on_line_is_inside ){
-		return (u >= 0) && (v >= 0) && (u + v <= 1);
-	}
-	else{
-		return (u > 0) && (v > 0) && (u + v < 1);
-	}
-}
-
-//Decides whether a point is inside a polygon
-template<typename T>
-bool point_in_polygon( const Vec2D<T>& x, const polygon<T>& p){
-	//Check bounding box if p is reasonably large to justify another loop through it
-	if(p.size() > 10){
-		double x_min = p[0][0], x_max = x_min, y_max = p[0][1], y_min = y_max;
-		for( const auto& p_i : p){
-			if(p_i[0] > x_max){ x_max = p_i[0]; }
-			else if(p_i[0] < x_min){ x_min = p_i[0]; }
-			if(p_i[1] > y_max){ y_max = p_i[1]; }
-			else if(p_i[1] < y_min){ y_min = p_i[1]; }
-		}
-		if(x[0] < x_min || x[0] > x_max || x[1] < y_min || x[1 > y_min]){
-			return false;
-		}
-	}
-
-	//If point is within bounding box, calculate edge crossings with a horizontal ray from x to the right
-	bool inside = false;
-	for ( std::size_t i=0, j=p.size()-1; i<p.size(); j=i++ ) {
-		LineSegment<T> s ( {p[i], p[j]} );
-		if ( internal::ray_intersects_segment( x, s ) ){
-            inside = !inside;
-        }
-	}
-	return inside;
-}
-
-//Calculates the convex hull of the given set of points
-template<typename T>
-geom2d::polygon<T> convex_hull(const geom::point_cloud<T,2>& points){ //TODO: enable any stl container
-	//Simple cases
-	if ( points.size() < 3 ) {
-		return points;
-	}
-
-	//Search max, min of y,x
-	std::vector<Vec2D<T>> relevant_points;
-	Vec2D<T> left = points.front(), top = points.front(), right = points.front(), bottom = points.front();
-
-	for( const auto& p : points){
-        if(p[0] < left[0]){
-            left = p;
-        }
-        if(p[0] > right[0]){
-            right = p;
-        }
-        if(p[1] < bottom[1]){
-            bottom = p;
-        }
-        if(p[1] > top[1]){
-            top = p;
-        }
-	}
-
-	//Exclude degenerate case to avoid divisions by 0
-	if(geom::in_range(left[0], right[0])){
-		return {bottom, top};
-	}
-	if(geom::in_range(top[1], bottom[1])){
-		return {left, right};
-	}
-
-	//Sort points into upper/lower half and delete irrelevant ones
-	std::vector<Vec2D<T>> relevant_points_upper;
-	std::vector<Vec2D<T>> relevant_points_lower( { left } );
-	double m = (right[1]-left[1]) / (right[0]-left[0]); ///y per x of middle line
-	
-	for(const auto& p : points){
-		double y_cut = left[1] + m * (p[0] - left[0]);
-		if( p[1] > y_cut ) ///p above  middle line? The points left and right do not fulfill this, they are part of the lower hull
-		{
-			if( !point_in_triangle<T>(left, top, right, p)){
-				relevant_points_upper.push_back(p);
-			}
-		}
-		else if( p[1] < y_cut ){
-			if ( !point_in_triangle<T>( left, bottom, right, p ) ) {
-				relevant_points_lower.push_back( p );
-			}
-		}
-	}
-	relevant_points_lower.push_back( right );
-
-	//Sort relevant points by x-coordinate
-    std::sort(std::begin(relevant_points_upper), std::end(relevant_points_upper),
-                [](const Vec2D<T>& p1, const Vec2D<T>& p2) -> bool{
-                    return (p1[0] == p2[0]) ? (p1[1] < p2[1]) : (p1[0] < p2[0]);
-                }
-	);
-
-    std::sort(std::begin(relevant_points_lower), std::end(relevant_points_lower),
-                [](const Vec2D<T>& p1, const Vec2D<T>& p2) -> bool{
-                    return (p1[0] == p2[0]) ? (p1[1] > p2[1]) : (p1[0] > p2[0]);
-                }
-	);
-
-	//Compute the convex hull
-	std::vector<Vec2D<T>> hull;
-	hull.reserve( relevant_points_upper.size()+relevant_points_lower.size() );
-	
-	//lower
-	for(const auto& p : relevant_points_lower){
-		while(hull.size() >= 2 ){
-			auto p0 = hull[hull.size()-2];
-			auto p1 = hull[hull.size()-1];
-			if( cross( p1-p0, p-p0 ) > 0.0 ){
-				hull.pop_back();
-			}
-			else{ break; }
-		}
-		hull.push_back(p);
-	}
-
-	//upper
-	std::size_t n_lower = hull.size();
-	for(const auto& p : relevant_points_upper){
-		while(hull.size() >= n_lower +2){
-			auto p0 = hull[hull.size()-2];
-			auto p1 = hull[hull.size()-1];
-			if( cross( p1-p0, p-p0 ) > 0.0 ){
-				hull.pop_back();
-			}
-			else{ break; }
-		}
-		hull.push_back(p);
-	}
-
-	return hull;
-}
-
 //Calculates the minimal enclosing parallelogram of the given set of points
 template<typename T>
 geom2d::polygon<double> min_enclosing_parallelogram( const geom::point_cloud<T, 2>& points ) {
@@ -944,7 +879,7 @@ geom2d::polygon<double> min_enclosing_parallelogram( const geom::point_cloud<T, 
 }
 
 
-//Calculates the bounding box (axis aligned) of a set of points. 
+//Calculates the bounding box (axis aligned) of a set of points.
 //The returned polygon contains the 4 edges of the box
 template<typename T>
 geom2d::polygon<double> bonding_box( const geom::point_cloud<T, 2>& points ) {
@@ -982,6 +917,77 @@ geom2d::polygon<double> bonding_box( const geom::point_cloud<T, 2>& points ) {
 //Segment arithmetics
 /////////////////////
 
+namespace internal
+{
+
+	template<typename T>
+	std::pair<double, double> segments_on_line_intersection( const LineSegment<T>& s1, const LineSegment<T>& s2, OverlapStrategy strategy ) {
+		Vec2D<T> x_vec = s1.x2 - s1.x1;
+		Vec2D<T> x1y1_vec = s2.x1 - s1.x1;
+		Vec2D<T> x1y2_vec = s2.x2 - s1.x1;
+		Vec2D<T> x2y1_vec = s2.x1 - s1.x2;
+		Vec2D<T> x2y2_vec = s2.x2 - s1.x2;
+		Vec2D<double> x_normal = geom2d::normal( x_vec.as_doubles() );
+
+		int x1y1_sign = geom::sign( cross( x_normal, x1y1_vec.as_doubles() ) );
+		int x1y2_sign = geom::sign( cross( x_normal, x1y2_vec.as_doubles() ) );
+		int x2y1_sign = geom::sign( cross( x_normal, x2y1_vec.as_doubles() ) );
+		int x2y2_sign = geom::sign( cross( x_normal, x2y2_vec.as_doubles() ) );
+
+		if ( x1y1_sign == x1y2_sign  && x1y2_sign == x2y1_sign && x2y1_sign == x2y2_sign ) {
+            //no intersection, because y1&y2 on the same side of the normal
+            assert(x1y1_sign != 0); ///sanity check
+			return {-1,-1};
+		}
+
+		std::vector<int> signs( { x1y1_sign, x1y2_sign, x2y1_sign, x2y2_sign } );
+		int neg = 0; int zeros = 0; int pos = 0;
+		for ( const auto& sign : signs ) {
+			if ( sign == 0 ) {zeros++;}
+			else if ( sign < 0 ) {neg++;}
+			else {pos++;}
+		}
+		assert( neg + pos + zeros == 4 ); ///sanity check
+
+		if ( zeros == 1 && (neg == 0 || pos == 0) && strategy >= OverlapStrategy::ALLOW_TOUCHING ) {
+			if ( x1y1_sign == 0 ) { return{ 0,0 }; }
+			if ( x1y2_sign == 0 ) { return{ 0,1 }; }
+			if ( x2y1_sign == 0 ) { return{ 1,0 }; }
+			if ( x2y2_sign == 0 ) { return{ 1,1 }; }
+
+			throw(std::invalid_argument( "Overlapping line segments, which are not allowed" ));// +"{ " + s1.x1.print() + " ; " + s1.x2.print() + " }   <>   { " + s2.x1.print() + " ; " + s2.x2.print() + " }" ) );
+		}
+
+		else if( strategy == OverlapStrategy::ALLOW_OVERLAP){
+			//Return parameters of the middle of the overlapping segment
+
+			//case 1: s2 completely in s1
+			if ( (x1y1_sign >= 0 && x1y2_sign >= 0 && x2y1_sign <= 0 && x2y2_sign <= 0)
+				 || (x1y1_sign <= 0 && x1y2_sign <= 0 && x2y1_sign >= 0 && x2y2_sign >= 0) ) {
+				auto s2_middle = s2.x1.as_doubles() + (s2.x2-s2.x1).as_doubles()/2.0;
+				return{ geom::dist(s2_middle, s1.x1.as_doubles()) / geom::norm(x_vec), 0.5 };
+			}
+			//case 2: s1 completely in s2
+			if ( (x1y1_sign <= 0 && x1y2_sign >= 0 && x2y1_sign <= 0 && x2y2_sign >= 0)
+				 || (x1y1_sign >= 0 && x1y2_sign <= 0 && x2y1_sign >= 0 && x2y2_sign <= 0) ) {
+				auto s1_middle = s1.x1.as_doubles() + (s1.x2 - s1.x1).as_doubles()/2.0;
+				return{ 0.5, geom::dist( s1_middle, s2.x1.as_doubles() ) / geom::dist( s2.x1, s2.x2 ) };
+			}
+			//case 3:
+			auto p1 = (x1y1_sign == x1y2_sign) ? s1.x2 : s1.x1;
+			auto p2 = (x1y1_sign == x2y1_sign) ? s2.x2 : s2.x1;
+			auto overlap_middle = p1.as_doubles() + (p2 - p1).as_doubles() / 2.0;
+			return {geom::dist( overlap_middle, s1.x1.as_doubles() ) / geom::dist( s1.x1, s1.x2 ),
+					geom::dist( overlap_middle, s2.x1.as_doubles() ) / geom::dist( s2.x1, s2.x2 )};
+		}
+
+		else {
+			throw(std::invalid_argument( "Touching or overlapping parallel line segments, which are not allowed" ));// + "{ " + s1.x1.print() + " ; " + s1.x2.print() + " }   <>   { " + s2.x1.print() + " ; " + s2.x2.print() + " }" ));
+		}
+	}
+
+
+}//namespace internal
 
 
 //Given two line segments g1 = x1+s*(x2-x1), g2 = y1+t*(y2-y1), (s,t in [0,1]), the function returns the paramaeter pair s_0, t_0 (each in [0,1]) such that x1+s_0*(x2-x1) = y1+t_0*(y2-y1) is the intersection of g1 and g2.

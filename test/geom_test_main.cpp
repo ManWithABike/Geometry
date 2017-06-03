@@ -24,8 +24,8 @@ void test_basic_funcionality(){
 	assert( const_vec[3] == 5 );
 	const_vec.dimension();
 	assert( const_vec.dimension() == 4 );
-	
-	const auto xyz = geom::Vec<unsigned char, 3>( { 1,2,3 } );
+
+	const auto xyz = geom::Vec<unsigned char, 3>( 1,2,3 );
 	assert( xyz.x() == 1);
 	assert( xyz.y() == 2 );
 	assert( xyz.z() == 3 );
@@ -90,15 +90,15 @@ void test_basic_funcionality(){
 	geom::Vec<double, 6> vec6d_1{ { 1, -2, 3, -4, 5, -6 } };
 	n = geom::norm( vec6d_1 );
 	assert( geom::in_range( n, std::sqrt( 1 + 4 + 9 + 16 + 25 + 36) ) );
-	
+
 	Vec2i v2( 1, 1 );
 	double norm = geom::norm( v2 );
 	assert( geom::in_range( norm, std::sqrt( 2 ) ) );
-	
+
 	geom::Vec<int, 2> cv1( true, false );
 	norm = geom::norm( geom::normalize( cv1.as_doubles() ) );
 	assert( geom::in_range( norm, 1.0 ) );
-	
+
 	//Crossproduct
 	assert( geom2d::cross<double>( { 0,1 }, { 1,0 } ) == geom::Sign::NEGATIVE );
 	assert( geom2d::cross<double>( { 1,0 }, { 0,1 } ) == geom::Sign::POSITIVE );
@@ -116,7 +116,7 @@ void test_basic_funcionality(){
 	if ( c != Vec2( 0.5, 0.5 ) ) {
 		assert( false );
 	}
-	
+
 	std::cout << "- basic functions test successful" << std::endl;
 }
 
@@ -210,7 +210,7 @@ void test_point_in_polygon() {
 	assert( geom2d::point_in_triangle<int>( { 0,0 }, { 2,0 }, { 1,2 }, { 1,1 } ) );
 
 	assert( !geom2d::point_in_triangle<int>( { 0,0 }, { 2,0 }, { 1,2 }, { 0,0 } ) );
-	
+
 	assert( !geom2d::point_in_triangle<int>( { 0,0 }, { 2,0 }, { 1,2 }, { 1,0 } ) );
 
 	assert( geom2d::point_in_triangle<int>( { 0,0 }, { 2,0 }, { 1,2 }, { 1,0 }, true ) );
@@ -218,9 +218,9 @@ void test_point_in_polygon() {
 	assert( geom2d::point_in_triangle<int>( { 0,0 }, { 2,0 }, { 1,2 }, { 0,0 }, true ) );
 
 	assert( !geom2d::point_in_triangle<double>( { 0,0 }, { 2,0 }, { 1,2 }, { 1,-0.0000000000001 }, true ) );
-	
+
 	assert( geom2d::point_in_triangle<double>( { 0,0 }, { 2,0 }, { 1,2 }, { 1,0.0000000000001 }, true ) );
-	
+
 	assert( geom2d::point_in_triangle<double>( { 0,0 }, { 2,0 }, { 1,2 }, { 1,1.99999999999999 }, true ) );
 
 	assert( !geom2d::point_in_triangle<double>( { 0,0 }, { 2,0 }, { 1,2 }, { 1,-0.0000000000001 }, false ) );
@@ -228,7 +228,7 @@ void test_point_in_polygon() {
 	assert( geom2d::point_in_triangle<double>( { 0,0 }, { 2,0 }, { 1,2 }, { 1,0.0000000000001 }, false ) );
 
 	assert( geom2d::point_in_triangle<double>( { 0,0 }, { 2,0 }, { 1,2 }, { 1,1.99999999999999 }, false ) );
-	
+
 	std::cout << "- point in polygon tests successful" << std::endl;
 }
 
@@ -383,7 +383,7 @@ void test_segment_intersections() {
 	s2 = { { 2,0 },{ -2, 0 } };
 	i = geom2d::segment_intersection( s1, s2, geom2d::OverlapStrategy::ALLOW_OVERLAP );
 	assert( geom::in_range( i.first, 0.5 ) && geom::in_range( i.second, 0.5 ) );
-	
+
 	//s2 in s1
 	s2_d = { { 0.75,0 },{ -0.25, 0 } };
 	i = geom2d::segment_intersection( s1_d, s2_d, geom2d::OverlapStrategy::ALLOW_OVERLAP );
@@ -418,7 +418,7 @@ void test_segment_intersections() {
 	s2_d = { { -2,0 },{ -1, 0 } };
 	i = geom2d::segment_intersection( s1_d, s2_d, geom2d::OverlapStrategy::ALLOW_TOUCHING );
 	assert( geom::in_range( i.first, 0.0 ) && geom::in_range( i.second, 1.0 ) );
-	
+
 	s2_d = { { -2,0 },{ -1, 0 } };
 	i = geom2d::segment_intersection( s2_d, s1_d, geom2d::OverlapStrategy::ALLOW_TOUCHING );
 	assert( geom::in_range( i.first, 1.0 ) && geom::in_range( i.second, 0.0 ) );
@@ -430,7 +430,7 @@ void test_segment_intersections() {
 	s2_d = { { 1,0 },{ 24.654, 234.6874 } };
 	i = geom2d::segment_intersection( s1_d, s2_d, geom2d::OverlapStrategy::ALLOW_TOUCHING );
 	assert( geom::in_range( i.first, 1.0 ) && geom::in_range( i.second, 0.0 ) );
-	
+
 	s2_d = { { 1,0 },{ -24.654, -234.6874 } };
 	i = geom2d::segment_intersection( s1_d, s2_d, geom2d::OverlapStrategy::ALLOW_TOUCHING );
 	assert( geom::in_range( i.first, 1.0 ) && geom::in_range( i.second, 0.0 ) );
