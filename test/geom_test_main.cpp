@@ -58,6 +58,8 @@ void test_basic_funcionality(){
 	assert( (mv_1 == geom::Vec<int,1>(-2)) );
 	auto mv_3 = mv_3d.round();
 	assert( (mv_3 == geom::Vec<int, 3>(1, 3, 4)) );
+	auto mv_4 = mv_4i.round();
+	assert( (mv_4 == geom::Vec<int,4>(1,2,3,4)) );
 
 	//Set coordinates
 	mv_3d[2] = 2.14;
@@ -541,8 +543,11 @@ void test_segment_intersections() {
 
 
 void test_examples() {
+    std::cout << std::endl << "---Example_1 Output:" <<std::endl;
 	ex1();
+	std::cout << std::endl << "---Example_2 Output:" <<std::endl;
 	ex2();
+	std::cout << std::endl << "---Example_3 Output:" <<std::endl;
 	ex3();
 	std::cout << "- example tests successful" << std::endl;
 }
@@ -577,7 +582,8 @@ int main(){
 	//examples
 	test_examples();
 
-    std::cout << "Congrats! All tests succesful." << std::endl;
+    std::cout << std::endl << "------------------------------" << std::endl
+				<< "Congrats! All tests succesful." << std::endl;
 
 	return 0;
 }
