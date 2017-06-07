@@ -11,6 +11,7 @@
 #include <array>
 #include <string>
 #include <cfloat> // DBL_MAX
+#include <cmath>
 #include <algorithm>
 #include <iostream>
 #include <cassert>
