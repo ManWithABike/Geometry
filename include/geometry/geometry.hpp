@@ -769,12 +769,12 @@ namespace internal{
 			idxs.push_back( t );
 
 			for ( std::size_t p = 1; p < convex_polygon.size(); p++ ) {
-				auto p1 = convex_polygon[p%convex_polygon.size()];
-				auto p2 = convex_polygon[(p + 1) % convex_polygon.size()];
+				auto p_1 = convex_polygon[p%convex_polygon.size()];
+				auto p_2 = convex_polygon[(p + 1) % convex_polygon.size()];
 				auto _p = convex_polygon[t % convex_polygon.size()];
 				auto _pp = convex_polygon[(t + 1) % convex_polygon.size()];
 
-				while ( distance( p1, p2, _pp ) > distance( p1, p2, _p ) ) {
+				while ( distance( p_1, p_2, _pp ) > distance( p_1, p_2, _p ) ) {
 					t = (t + 1) % convex_polygon.size();
 					_p = convex_polygon[t % convex_polygon.size()];
 					_pp = convex_polygon[(t + 1) % convex_polygon.size()];
@@ -883,7 +883,7 @@ geom2d::polygon<double> min_enclosing_parallelogram( const geom::point_cloud<T, 
 //Calculates the bounding box (axis aligned) of a set of points.
 //The returned polygon contains the 4 edges of the box
 template<typename T>
-geom2d::polygon<double> bonding_box( const geom::point_cloud<T, 2>& points ) {
+std::pair<geom::Vec<T,2>, geom::Vec<T, 2>> bounding_box( const geom::point_cloud<T, 2>& points ) {
 	if ( points.empty() ) {
 		return{};
 	}
@@ -910,7 +910,7 @@ geom2d::polygon<double> bonding_box( const geom::point_cloud<T, 2>& points ) {
 		}
 	}
 
-	return{ {x_min, y_min}, {x_max, y_min}, {x_max, y_max}, {x_min, y_max} };
+	return{ {x_min, y_min}, {x_max, y_max} };
 }
 
 
