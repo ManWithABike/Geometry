@@ -63,10 +63,10 @@ void test_basic_funcionality(){
 
 	//Set coordinates
 	mv_3d[2] = 2.14;
-	assert( mv_3d[2] == 2.14 );
-	assert(mv_3d.Get<2>() == 2.14);
+	assert( geom::in_range(mv_3d[2], 2.14) );
+	assert(geom::in_range(mv_3d.Get<2>(), 2.14) );
 	const auto mv_3d_const = mv_3d;
-	assert( mv_3d_const.Get<2>() == 2.14 );
+	assert( geom::in_range(mv_3d_const.Get<2>(), 2.14) );
 
 	//Compute Pythagoras & Operators
 	Vec3 vec3d_1{ { 0,1,2 } };
@@ -102,10 +102,10 @@ void test_basic_funcionality(){
 	assert( geom::in_range( norm, 1.0 ) );
 
 	//Crossproduct
-	assert( geom2d::cross<double>( { 0,1 }, { 1,0 } ) == geom::Sign::NEGATIVE );
-	assert( geom2d::cross<double>( { 1,0 }, { 0,1 } ) == geom::Sign::POSITIVE );
+	assert( geom::in_range(geom2d::cross<double>( { 0,1 }, { 1,0 } ), static_cast<double>(geom::Sign::NEGATIVE) ) );
+	assert( geom::in_range(geom2d::cross<double>( { 1,0 }, { 0,1 } ), static_cast<double>(geom::Sign::POSITIVE)) );
 	assert( geom2d::cross<double>( { 1e-16,0 }, { 0,1e-16 } ) > 0.0 );
-	assert( geom2d::cross<double>( { 1,0 }, { 2,0 } ) == geom::Sign::ZERO );
+	assert( geom::in_range(geom2d::cross<double>( { 1,0 }, { 2,0 } ), static_cast<double>(geom::Sign::ZERO) ) );
 
 	//Dist
 	vec3d_1 = { { 4,-1,-7 } };
@@ -126,9 +126,9 @@ void test_angles() {
 	geom2d::Vec2D<double> vec1{ 1,0 };
 	geom2d::Vec2D<double> vec2{ 10,0 };
 
-	assert( geom2d::angle( vec1, vec2 ).deg() == 0.0 );
-	assert( geom2d::enclosed_angle( vec1, vec2 ).deg() == 0.0 );
-	assert( geom2d::positive_angle( vec1, vec2 ).deg() == 0.0 );
+	assert( geom::in_range(geom2d::angle( vec1, vec2 ).deg(), 0.0) );
+	assert( geom::in_range(geom2d::enclosed_angle( vec1, vec2 ).deg(), 0.0) );
+	assert( geom::in_range(geom2d::positive_angle( vec1, vec2 ).deg(), 0.0) );
 
 	vec2 = { 1,1 };
 	assert( geom::in_range( geom2d::angle( vec1, vec2 ).deg(), 45.0 ) );
@@ -269,19 +269,19 @@ void test_polygon_area() {
 
 void test_rectangles() {
 	auto rect = geom2d::Rectangle( { 1,1 }, { 0,0 }, std::sqrt(2), true );
-	assert( geom::in_range( rect.angle.deg(), 45.0 ) );
+	assert( geom::in_range( rect.angle().deg(), 45.0 ) );
 
 	rect = geom2d::Rectangle( { 1,0 }, { 0,0 }, std::sqrt( 1 ), true );
-	assert( geom::in_range( rect.angle.deg(), 0.0 ) );
+	assert( geom::in_range( rect.angle().deg(), 0.0 ) );
 
 	rect = geom2d::Rectangle( { 1,1 }, { 0,0 }, std::sqrt( 2 ), false );
-	assert( geom::in_range( rect.angle.deg(), -45.0 ) );
+	assert( geom::in_range( rect.angle().deg(), -45.0 ) );
 
 	rect = geom2d::Rectangle( { 1,0 }, { 0,0 }, std::sqrt( 1 ), false );
-	assert( geom::in_range( rect.angle.deg(), 0.0 ) );
+	assert( geom::in_range( rect.angle().deg(), 0.0 ) );
 
 	rect = geom2d::Rectangle( { 10,10 }, { 0,10 }, 10, true );
-	assert( geom::in_range( rect.angle.deg(), 0.0 ) );
+	assert( geom::in_range( rect.angle().deg(), 0.0 ) );
 	assert( geom::in_range( rect.points()[2].x(), 0.0 ) );
 	assert( geom::in_range( rect.points()[2].y(), 0.0 ) );
 	assert( geom::in_range( rect.points()[3].x(), 10.0 ) );
@@ -290,7 +290,7 @@ void test_rectangles() {
 	rect = geom2d::Rectangle( { 1,1 }, { 0,0 }, 1, true );
 
 	rect = geom2d::Rectangle( { 1,2 }, { 0,1 }, std::sqrt(2), true );
-	assert( geom::in_range( rect.angle.deg(), 45.0 ) );
+	assert( geom::in_range( rect.angle().deg(), 45.0 ) );
 	assert( geom::in_range( rect.centroid().x(), 1.0 ) );
 	assert( geom::in_range( rect.centroid().y(), 1.0 ) );
 

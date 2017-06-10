@@ -443,37 +443,6 @@ T cross( const Vec2D<T>& vec1, const Vec2D<T>& vec2 ) {
 
 
 
-////////////////////
-//Pointcloud struct
-////////////////////
-template<typename T>
-using point_cloud = geom::point_cloud<T, 2>;
-
-
-////////////////
-//Segment struct
-////////////////
-
-template <typename T>
-struct LineSegment {
-	LineSegment( Vec2D<T> x1, Vec2D<T> x2 ) : x1( x1 ), x2( x2 ) {};
-	LineSegment( const LineSegment<T>& segment ) : x1( segment.x1 ), x2( segment.x2 ) {};
-
-	Vec2D<T> x1;
-	Vec2D<T> x2;
-};
-
-
-
-////////////////
-//Polygon struct
-////////////////
-template <typename T>
-using polygon = std::vector<Vec2D<T>>;
-
-
-
-
 ///////////////////
 //Vector Arithmetic
 ///////////////////
@@ -539,6 +508,118 @@ geom::Angle positive_angle( const Vec2D<T>& vec1, const Vec2D<T>& vec2 ) {
 	geom::Angle angle = geom2d::angle( vec1, vec2 );
 	return (angle.deg() >= 0.0) ? angle : geom::Angle(360.0 + angle.deg(), geom::AngleType::DEG);
 }
+
+////////////////////
+//Pointcloud struct
+////////////////////
+template<typename T>
+using point_cloud = geom::point_cloud<T, 2>;
+
+
+////////////////
+//Segment struct
+////////////////
+
+template <typename T>
+struct LineSegment {
+	LineSegment( Vec2D<T> x1, Vec2D<T> x2 ) : x1( x1 ), x2( x2 ) {};
+	LineSegment( const LineSegment<T>& segment ) : x1( segment.x1 ), x2( segment.x2 ) {};
+
+	Vec2D<T> x1;
+	Vec2D<T> x2;
+};
+
+
+
+////////////////
+//Polygon struct
+////////////////
+template <typename T>
+using polygon = std::vector<Vec2D<T>>;
+
+
+
+//////////////////
+//Rectangle struct
+//////////////////
+
+struct Rectangle {
+	//Create an up-right (i.e. axis aligned) rectangle by giving the bottom-left and top-right corner
+	Rectangle( const Vec2D<double>& bottom_left, const Vec2D<double>& top_right ) : x1( bottom_left ), x2( top_right.x(), bottom_left.y() ), x3( top_right ), x4( bottom_left.x(), top_right.y() ), ang( geom::Angle() ) {
+        assert( bottom_left.x() <= top_right.x() );
+        assert( bottom_left.y() <= top_right.y() );
+	};
+
+	//Create a rectangle from two points forming the first edge, and the length of the second edge.
+	//The Flag p1_p2_counterclockwise indicates whether p1 p2 lie counterclockwise along the perimeter of the rectangle. I.e., if the second edge turns left or right when walking along the first edge from p1 to p2.
+	Rectangle( const Vec2D<double>& p1, const Vec2D<double>& p2, double edge2_length, bool p1_p2_counterclockwise ) : x1(p1), x2(p2), x3(p2), x4(p2){
+		assert( !geom::in_range(edge2_length, 0.0) );
+		assert( p1 != p2 );
+		auto n = geom2d::normal( p2 - p1 );
+		if ( p1_p2_counterclockwise ) {
+			x3 += (n* edge2_length);
+			x4 = p1 + (n * edge2_length);
+		}
+		else {
+			x2 = p1 - (n * edge2_length);
+			x3 -= (n * edge2_length);
+		}
+
+		const auto side_center = x1 + (x2 - x1) / 2.0;
+		const auto center = centroid();
+		const auto side_median = (x1 - center) + (x2 - center);
+		assert( geom::in_range( cross( side_center - center, side_median ), 0.0 ) ); //TODO: delete debug assertion
+
+		const auto total_angle = geom2d::positive_angle( { 1,0 }, side_median );
+		const auto axis_angle_deg = std::fmod( total_angle.deg(), 90.0 );
+		const auto rect_angle_deg = axis_angle_deg > 45.0 ? axis_angle_deg - 90 : axis_angle_deg;
+
+		ang = geom::Angle( rect_angle_deg, geom::AngleType::DEG );
+	};
+
+	//Copy constructor
+	Rectangle( const Rectangle& rect ) : x1( rect.x1 ), x2( rect.x2 ), x3( rect.x3 ), x4( rect.x4 ) {};
+
+
+	double perimeter() const {
+		return (geom::dist( x1, x2 ) + geom::dist( x2, x3 )) * 2;
+	}
+
+    //Returns a pair {width, height}
+	std::pair<double, double> get_size(){
+        return {geom::dist(x1,x2), geom::dist(x2,x3)};
+	}
+
+	Vec2D<double> centroid() const {
+		return (x1 + x2 + x3 + x4) / 4.0;
+	}
+
+	//Returns the corners of the rectangle in counter-clockwise order
+	std::array<Vec2D<double>, 4> points() const {
+		return{ x1,x2,x3,x4 };
+	}
+
+    Vec2D<double> bl() const{
+        return x1;
+    }
+
+    Vec2D<double> tr() const{
+        return x3;
+    }
+	//Represents the deflection of the angle.
+	//I.e. the minimal rotation necessary to align the rect along the axis is a rotation of (-1)*rect.angle degree around the centroid of the rectamgle
+	geom::Angle angle() const{
+        return ang;
+	}
+
+private:
+	Vec2D<double> x1;
+	Vec2D<double> x2;
+	Vec2D<double> x3;
+	Vec2D<double> x4;
+
+	geom::Angle ang;
+};
 
 
 
@@ -883,10 +964,8 @@ geom2d::polygon<double> min_enclosing_parallelogram( const geom::point_cloud<T, 
 //Calculates the bounding box (axis aligned) of a set of points.
 //The returned polygon contains the 4 edges of the box
 template<typename T>
-std::pair<geom::Vec<T,2>, geom::Vec<T, 2>> bounding_box( const geom::point_cloud<T, 2>& points ) {
-	if ( points.empty() ) {
-		return{};
-	}
+geom2d::Rectangle bounding_box( const geom::point_cloud<T, 2>& points ) {
+	assert( !points.empty() );
 
 	T x_max = points[0].x();
 	T x_min = points[0].x();
@@ -910,7 +989,7 @@ std::pair<geom::Vec<T,2>, geom::Vec<T, 2>> bounding_box( const geom::point_cloud
 		}
 	}
 
-	return{ {x_min, y_min}, {x_max, y_max} };
+	return{ Rectangle({x_min, y_min}, {x_max, y_max}) };
 }
 
 
@@ -1081,67 +1160,6 @@ Vec2D<double> centroid( const polygon<T>& p ) {
 }
 
 
-
-//////////////////
-//Rectangle struct
-//////////////////
-
-struct Rectangle {
-	//Create an up-right (i.e. axis aligned) rectangle by giving the bottom-left and top-right corner
-	Rectangle( const Vec2D<double>& bottom_left, const Vec2D<double>& top_right ) : x1( bottom_left ), x2( top_right.x(), bottom_left.y() ), x3( top_right ), x4( bottom_left.x(), top_right.y() ), angle( geom::Angle() ) {};
-
-	//Create a rectangle from two points forming the first edge, and the length of the second edge.
-	//The Flag p1_p2_counterclockwise indicates whether p1 p2 lie counterclockwise along the perimeter of the rectangle. I.e., if the second edge turns left or right when walking along the first edge from p1 to p2.
-	Rectangle( const Vec2D<double>& p1, const Vec2D<double>& p2, double edge2_length, bool p1_p2_counterclockwise ) : x1(p1), x2(p2), x3(p2), x4(p2){
-		auto n = geom2d::normal( p2 - p1 );
-		if ( p1_p2_counterclockwise ) {
-			x3 += (n* edge2_length);
-			x4 = p1 + (n * edge2_length);
-		}
-		else {
-			x2 = p1 - (n * edge2_length);
-			x3 -= (n * edge2_length);
-		}
-
-		const auto side_center = x1 + (x2 - x1) / 2.0;
-		const auto center = centroid();
-		const auto side_median = (x1 - center) + (x2 - center);
-		assert( geom::in_range( cross( side_center - center, side_median ), 0.0 ) ); //TODO: delete debug assertion
-
-		const auto total_angle = geom2d::positive_angle( { 1,0 }, side_median );
-		const auto axis_angle_deg = std::fmod( total_angle.deg(), 90.0 );
-		const auto rect_angle_deg = axis_angle_deg > 45.0 ? axis_angle_deg - 90 : axis_angle_deg;
-
-		angle = geom::Angle( rect_angle_deg, geom::AngleType::DEG );
-	};
-
-	//Copy constructor
-	Rectangle( const Rectangle& rect ) : x1( rect.x1 ), x2( rect.x2 ), x3( rect.x3 ), x4( rect.x4 ) {};
-
-
-	double perimeter() const {
-		return (geom::dist( x1, x2 ) + geom::dist( x2, x3 )) * 2;
-	}
-
-	Vec2D<double> centroid() const {
-		return (x1 + x2 + x3 + x4) / 4.0;
-	}
-
-	//Returns the corners of the rectangle in counter-clockwise order
-	std::array<Vec2D<double>, 4> points() const {
-		return{ x1,x2,x3,x4 };
-	}
-
-	//Represents the deflection of the angle.
-	//I.e. the minimal rotation necessary to align the rect along the axis, is (-1)*rect.angle
-	geom::Angle angle;
-
-private:
-	Vec2D<double> x1;
-	Vec2D<double> x2;
-	Vec2D<double> x3;
-	Vec2D<double> x4;
-};
 
 
 }//namespace geom2d
