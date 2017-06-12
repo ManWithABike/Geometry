@@ -4,8 +4,8 @@
 // (See accompanying file LICENSE)
 
 
-
 #pragma once
+
 
 #include <vector>
 #include <array>
@@ -990,7 +990,7 @@ geom2d::Rectangle bounding_box( const geom::point_cloud<T, 2>& points ) {
 		}
 	}
 
-	return{ Rectangle( Vec2D<T>({x_min, y_min}).as_doubles(), Vec2D<T>({x_max, y_max}).as_doubles() ) };
+	return{ Rectangle( Vec2D<T>(x_min, y_min).as_doubles(), Vec2D<T>(x_max, y_max).as_doubles() ) };
 }
 
 
