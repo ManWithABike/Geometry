@@ -966,7 +966,7 @@ geom2d::polygon<double> min_enclosing_parallelogram( const geom::point_cloud<T, 
 template<typename T>
 geom2d::Rectangle bounding_box( const geom::point_cloud<T, 2>& points ) {
 	assert( !points.empty() );
-	static_assert(std::is_convertible<T, double>::value);
+	static_assert( std::is_convertible<T, double>::value, "geom2d::bounding_box: bounding_box can only be computed for point types which can be converted to double!" );
 
 	T x_max = points[0].x();
 	T x_min = points[0].x();
