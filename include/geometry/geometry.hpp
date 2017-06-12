@@ -144,6 +144,10 @@ struct Vec {
 		return coordinates.size();
 	}
 
+	const std::array<T, N>& coords() const {
+		return coordinates;
+	}
+
 	template< std::size_t n, typename std::enable_if<n<N, int>::type = 0>
 	const T& Get() const {
 		return coordinates[n];
@@ -212,6 +216,13 @@ struct Vec {
         }
         return result + std::to_string( coordinates.back() ) + ")";
     }
+
+	auto begin() const {
+		return coordinates.begin();
+	}
+	auto end() const {
+		return coordinates.end();
+	}
 
 private:
 	std::array<T, N> coordinates;
@@ -384,9 +395,43 @@ double square_dist( const Vec<T,N>& p1, const Vec<T,N>& p2 ) {
 	return internal::compute_pythagoras<T, N, N-1>::apply( p1, p2 );
 }
 
+//Returns the euclidean distance between p1, p2
 template<typename T, std::size_t N>
 double dist( const Vec<T,N>& p1, const Vec<T,N>& p2 ) {
 	return std::sqrt( square_dist( p1, p2 ) );
+}
+
+//Returns the manhattan distance between p1, p2
+template<typename T, std::size_t N>
+double dist_manhattan( const Vec<T, N>& p1, const Vec<T, N>& p2 ) {
+	auto d = p2 - p1;
+	double result(0);
+	for ( const auto& dx : d ) {
+		result += std::abs( dx );
+	}
+	return result;
+}
+
+template<typename T, std::size_t N>
+T product( const Vec<T, N>& v ) {
+	auto coords = v.coords();
+	T result( 1 );
+	for ( std::size_t i = 0; i < coords.size(); i++ ) {
+		result *= coords[i];
+	}
+	return { result };
+}
+
+template<typename T, std::size_t N>
+Vec<T, N> abs( const Vec<T, N>& v ) {
+	auto coords = v.coords();
+	for ( std::size_t i = 0; i < coords.size(); i++ ) {
+		if ( coords[i] < 0 ) {
+			coords[i] *= -1;
+		}
+	}
+
+	return { coords };
 }
 
 
@@ -403,6 +448,27 @@ std::string print( const std::vector<Vec<T,N>>& vec ) {
 	result.pop_back();
 	return result;
 }
+
+
+//Calculates the bounding box (axis aligned hyper-cuboid) of a set of n-dimensional points.
+template<typename T, std::size_t dimension>
+std::pair<geom::Vec<T, dimension>, geom::Vec<T, dimension>> bounding_box( const geom::point_cloud<T, dimension>& points ) {
+	assert( !points.empty() );
+	static_assert(std::is_convertible<T, double>::value, "geom::bounding_box: bounding_box can only be computed for point types which can be converted to double!");
+
+	std::array<T, dimension> min (points[0].coords());
+	std::array<T, dimension> max (points[0].coords());
+	
+	for ( const auto& p : points ) {
+		for ( std::size_t i = 0; i < dimension; i++ ) {
+			if ( p[i] < min[i] ) min[i] = p[i];
+			if ( p[i] > max[i] ) max[i] = p[i];
+		}
+	}
+
+	return{ std::pair<geom::Vec<T,dimension>, geom::Vec<T,dimension>>{ {min}, {max} } };
+}
+
 
 }//namespace geom
 
@@ -588,6 +654,11 @@ struct Rectangle {
     //Returns a pair {width, height}
 	std::pair<double, double> get_size(){
         return {geom::dist(x1,x2), geom::dist(x2,x3)};
+	}
+
+	//Returns the area of the rectangle
+	double area() {
+		return geom::dist( x1,x2 ) * geom::dist( x2,x3 );
 	}
 
 	Vec2D<double> centroid() const {
