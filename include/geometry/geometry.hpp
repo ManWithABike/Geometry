@@ -217,10 +217,10 @@ struct Vec {
         return result + std::to_string( coordinates.back() ) + ")";
     }
 
-	auto begin() const {
+	std::_Array_const_iterator<T,N> begin() const {
 		return coordinates.begin();
 	}
-	auto end() const {
+	std::_Array_const_iterator<T, N> end() const {
 		return coordinates.end();
 	}
 
