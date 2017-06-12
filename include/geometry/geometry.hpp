@@ -218,11 +218,11 @@ struct Vec {
         return result + std::to_string( coordinates.back() ) + ")";
     }
 
-	std::_Array_const_iterator<T,N> begin() const {
-		return coordinates.begin();
+	typename std::array<T,N>::const_iterator begin() const {
+		return std::begin( coordinates );
 	}
-	std::_Array_const_iterator<T, N> end() const {
-		return coordinates.end();
+	 typename std::array<T,N>::const_iterator end() const {
+		return std::end( coordinates );
 	}
 
 private:
@@ -459,7 +459,7 @@ std::pair<geom::Vec<T, dimension>, geom::Vec<T, dimension>> bounding_box( const 
 
 	std::array<T, dimension> min (points[0].coords());
 	std::array<T, dimension> max (points[0].coords());
-	
+
 	for ( const auto& p : points ) {
 		for ( std::size_t i = 0; i < dimension; i++ ) {
 			if ( p[i] < min[i] ) min[i] = p[i];
