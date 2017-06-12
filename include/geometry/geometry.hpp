@@ -595,7 +595,7 @@ struct Rectangle {
 	}
 
 	//Returns the corners of the rectangle in counter-clockwise order
-	std::array<Vec2D<double>, 4> points() const {
+	std::vector<Vec2D<double>> points() const {
 		return{ x1,x2,x3,x4 };
 	}
 
@@ -966,6 +966,7 @@ geom2d::polygon<double> min_enclosing_parallelogram( const geom::point_cloud<T, 
 template<typename T>
 geom2d::Rectangle bounding_box( const geom::point_cloud<T, 2>& points ) {
 	assert( !points.empty() );
+	static_assert(std::is_convertible<T, double>::value);
 
 	T x_max = points[0].x();
 	T x_min = points[0].x();
@@ -989,7 +990,7 @@ geom2d::Rectangle bounding_box( const geom::point_cloud<T, 2>& points ) {
 		}
 	}
 
-	return{ Rectangle({x_min, y_min}, {x_max, y_max}) };
+	return{ Rectangle( Vec2D<T>({x_min, y_min}).as_doubles(), Vec2D<T>({x_max, y_max}).as_doubles() ) };
 }
 
 
