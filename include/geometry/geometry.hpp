@@ -40,16 +40,23 @@ const double e = std::exp( 1.0 );
 enum Sign { NEGATIVE = -1, ZERO = 0, POSITIVE = 1 };
 
 inline Sign sign( double x ) {
-	return x == 0.0 ? ZERO : (x<0 ? NEGATIVE : POSITIVE);
+	return x < 0.0 ? NEGATIVE : (x > 0.0 ? POSITIVE : ZERO);
 }
 
 inline Sign sign( int x ) {
-	return x == 0 ? ZERO : (x<0 ? NEGATIVE : POSITIVE);
+	return x == 0 ? ZERO : (x < 0 ? NEGATIVE : POSITIVE);
 }
 
-inline bool in_range( double goal, double x, int radius = 1) {
-	double min = goal - radius* (goal - std::nextafter( goal, -DBL_MAX ));
-	double max = goal + radius*(std::nextafter(goal, DBL_MAX ) - goal);
+inline bool in_range( double goal, double x, double radius ) {
+	assert( radius > 0 );
+	double min = goal - radius;
+	double max = goal + radius;
+	return min <= x && x <= max;
+}
+
+inline bool in_range( double goal, double x ) {
+	double min = std::nextafter( goal, -DBL_MAX );
+	double max = std::nextafter( goal, DBL_MAX );
 	return min <= x && x <= max;
 }
 
