@@ -400,7 +400,7 @@ Vec<double,N> normalize( const Vec<double,N>& vec ) {
 
 template<typename T, std::size_t N>
 double square_dist( const Vec<T,N>& p1, const Vec<T,N>& p2 ) {
-	return internal::compute_pythagoras<T, N, N-1>::apply( p1, p2 );
+	return static_cast<double>( internal::compute_pythagoras<T, N, N-1>::apply( p1, p2 ) );
 }
 
 //Returns the euclidean distance between p1, p2
