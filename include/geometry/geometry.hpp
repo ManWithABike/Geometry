@@ -28,9 +28,11 @@ namespace geom {
 //constants
 ///////////
 
-const double pi = 4.0 * std::atan( 1.0 );
-const double e = std::exp( 1.0 );
-
+constexpr double pi = 3.14159265358979323846;
+constexpr double e  = 2.71828182845904523536;
+constexpr double golden_ratio = 1.61803398874989484820;
+constexpr double sqrt2 = 1.41421356237309504880;
+constexpr double sqrt3 = 1.73205080756887729353;
 
 
 //////////////////
@@ -43,9 +45,18 @@ inline Sign sign( double x ) {
 	return x < 0.0 ? NEGATIVE : (x > 0.0 ? POSITIVE : ZERO);
 }
 
+inline Sign sign( float x ) {
+	return x < 0.0f ? NEGATIVE : (x > 0.0f ? POSITIVE : ZERO);
+}
+
 inline Sign sign( int x ) {
 	return x == 0 ? ZERO : (x < 0 ? NEGATIVE : POSITIVE);
 }
+
+inline Sign sign( long x ) {
+	return x == 0 ? ZERO : (x < 0 ? NEGATIVE : POSITIVE);
+}
+
 
 inline bool in_range( double goal, double x, double radius ) {
 	assert( radius > 0 );
@@ -63,6 +74,13 @@ inline bool in_range( double goal, double x ) {
 inline bool in_range(  float goal, float x ) {
 	float min = std::nextafter( goal, -FLT_MAX );
 	float  max = std::nextafter( goal, FLT_MAX );
+	return min <= x && x <= max;
+}
+
+inline bool in_range( float goal, float x, float radius ) {
+	assert( radius > 0 );
+	float min = goal - radius;
+	float max = goal + radius;
 	return min <= x && x <= max;
 }
 
@@ -236,6 +254,10 @@ private:
 	std::array<T, N> coordinates;
 };
 
+template<typename T, std::size_t N>
+std::array<T,N> get_coords( const Vec<T, N>& v ) {
+	return v.coords();
+}
 //make_vec because class template arguments (in their class constructors) cannot be deduced
 template <typename T, typename... Args, std::size_t N = sizeof...(Args) + 1 >
 geom::Vec<T,N> make_vec( T x, Args&&... xs )
